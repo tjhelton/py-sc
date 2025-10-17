@@ -6,12 +6,14 @@ include = '''(
   scripts/archive_templates/.*\.py$
   | scripts/create_groups/.*\.py$
   | scripts/create_sites/.*\.py$
+  | scripts/deactivate_users/.*\.py$
   | scripts/delete_actions/.*\.py$
   | scripts/delete_assets/.*\.py$
   | scripts/delete_sites/.*\.py$
   | scripts/export_asset_types/.*\.py$
   | scripts/export_template_access_rules/.*\.py$
   | scripts/fetch_issues/.*\.py$
+  | scripts/fetch_user_custom_fields/.*\.py$
   | scripts/get_public_issue_links/.*\.py$
   | scripts/get_sites_without_activity/.*\.py$
   | scripts/set_inspection_site/.*\.py$
@@ -49,12 +51,14 @@ src_paths = [
     "../scripts/archive_templates",
     "../scripts/create_groups",
     "../scripts/create_sites",
+    "../scripts/deactivate_users",
     "../scripts/delete_actions",
     "../scripts/delete_assets",
     "../scripts/delete_sites",
     "../scripts/export_asset_types",
     "../scripts/export_template_access_rules",
     "../scripts/fetch_issues",
+    "../scripts/fetch_user_custom_fields",
     "../scripts/get_public_issue_links",
     "../scripts/get_sites_without_activity",
     "../scripts/set_inspection_site",
@@ -94,12 +98,14 @@ files = [
     "../scripts/archive_templates",
     "../scripts/create_groups",
     "../scripts/create_sites",
+    "../scripts/deactivate_users",
     "../scripts/delete_actions",
     "../scripts/delete_assets",
     "../scripts/delete_sites",
     "../scripts/export_asset_types",
     "../scripts/export_template_access_rules",
     "../scripts/fetch_issues",
+    "../scripts/fetch_user_custom_fields",
     "../scripts/get_public_issue_links",
     "../scripts/get_sites_without_activity",
     "../scripts/set_inspection_site",
