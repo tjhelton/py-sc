@@ -7,5 +7,9 @@ pandas>=2.0.0
 requests>=2.31.0
 
 # Async HTTP library
-# Required by: fetch_issues, get_sites_without_activity
+# Required by: fetch_issues, get_sites_without_activity, fetch_user_custom_fields
 aiohttp>=3.9.0
+
+# Progress bar library
+# Required by: fetch_user_custom_fields
+tqdm>=4.66.0
