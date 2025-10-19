@@ -12,6 +12,7 @@ include = '''(
   | scripts/delete_sites/.*\.py$
   | scripts/export_asset_types/.*\.py$
   | scripts/export_template_access_rules/.*\.py$
+  | scripts/fetch_group_assignees/.*\.py$
   | scripts/fetch_issues/.*\.py$
   | scripts/fetch_user_custom_fields/.*\.py$
   | scripts/get_public_issue_links/.*\.py$
@@ -57,6 +58,7 @@ src_paths = [
     "../scripts/delete_sites",
     "../scripts/export_asset_types",
     "../scripts/export_template_access_rules",
+    "../scripts/fetch_group_assignees",
     "../scripts/fetch_issues",
     "../scripts/fetch_user_custom_fields",
     "../scripts/get_public_issue_links",
@@ -104,6 +106,7 @@ files = [
     "../scripts/delete_sites",
     "../scripts/export_asset_types",
     "../scripts/export_template_access_rules",
+    "../scripts/fetch_group_assignees",
     "../scripts/fetch_issues",
     "../scripts/fetch_user_custom_fields",
     "../scripts/get_public_issue_links",
