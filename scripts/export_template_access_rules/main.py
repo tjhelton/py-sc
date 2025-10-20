@@ -2,6 +2,7 @@ import csv
 import sys
 
 import requests
+from tqdm import tqdm
 
 TOKEN = ""  # Add your API token here
 BASE_URL = "https://api.safetyculture.io"
@@ -84,24 +85,32 @@ def process_template_permissions(template, users_lookup, groups_lookup):
 
 
 def fetch_users_lookup(client):
+    print("Fetching users...")
     users_lookup = {}
-    for user in client.fetch_paginated_feed("/feed/users"):
-        user_id = user.get("id", "")
-        user_name = (
-            f"{user.get('firstname', '')} {user.get('lastname', '')}".strip()
-            or user.get("email", "Unknown User")
-        )
-        users_lookup[client.transform_feed_id(user_id)] = user_name
+    with tqdm(desc="Users", unit="user") as pbar:
+        for user in client.fetch_paginated_feed("/feed/users"):
+            user_id = user.get("id", "")
+            user_name = (
+                f"{user.get('firstname', '')} {user.get('lastname', '')}".strip()
+                or user.get("email", "Unknown User")
+            )
+            users_lookup[client.transform_feed_id(user_id)] = user_name
+            pbar.update(1)
+    print(f"✓ Loaded {len(users_lookup)} users\n")
     return users_lookup
 
 
 def fetch_groups_lookup(client):
+    print("Fetching groups...")
     groups_lookup = {}
-    for group in client.fetch_paginated_feed("/feed/groups"):
-        group_id = group.get("id", "")
-        groups_lookup[client.transform_feed_id(group_id)] = group.get(
-            "name", "Unknown Group"
-        )
+    with tqdm(desc="Groups", unit="group") as pbar:
+        for group in client.fetch_paginated_feed("/feed/groups"):
+            group_id = group.get("id", "")
+            groups_lookup[client.transform_feed_id(group_id)] = group.get(
+                "name", "Unknown Group"
+            )
+            pbar.update(1)
+    print(f"✓ Loaded {len(groups_lookup)} groups\n")
     return groups_lookup
 
 
@@ -130,25 +139,35 @@ def main():
         users_lookup = fetch_users_lookup(client)
         groups_lookup = fetch_groups_lookup(client)
 
-        for template_summary in client.fetch_paginated_feed("/feed/templates"):
-            if template_summary.get("archived", False):
-                continue
-            template_detail = client.get_template_by_id(template_summary.get("id", ""))
-            if template_detail:
-                for record in process_template_permissions(
-                    template_detail, users_lookup, groups_lookup
-                ):
-                    csv_writer.writerow(
-                        [
-                            record["template_id"],
-                            record["name"],
-                            record["template_owner"],
-                            record["permission"],
-                            record["assignee_type"],
-                            record["assignee_id"],
-                            record["assignee_name"],
-                        ]
-                    )
+        print("Processing templates...")
+        records_written = 0
+        with tqdm(desc="Templates", unit="template") as pbar:
+            for template_summary in client.fetch_paginated_feed("/feed/templates"):
+                if template_summary.get("archived", False):
+                    continue
+                template_detail = client.get_template_by_id(
+                    template_summary.get("id", "")
+                )
+                if template_detail:
+                    for record in process_template_permissions(
+                        template_detail, users_lookup, groups_lookup
+                    ):
+                        csv_writer.writerow(
+                            [
+                                record["template_id"],
+                                record["name"],
+                                record["template_owner"],
+                                record["permission"],
+                                record["assignee_type"],
+                                record["assignee_id"],
+                                record["assignee_name"],
+                            ]
+                        )
+                        records_written += 1
+                pbar.update(1)
+        print(
+            f"✓ Completed! Wrote {records_written} access rules to template_access_rules.csv"
+        )
 
 
 if __name__ == "__main__":
