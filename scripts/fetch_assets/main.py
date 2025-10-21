@@ -12,8 +12,6 @@ BASE_URL = "https://api.safetyculture.io"
 
 
 class SafetyCultureAssetFetcher:
-    """High-performance SafetyCulture asset fetcher using async I/O."""
-
     def __init__(self):
         self.headers = {
             "accept": "application/json",
@@ -28,7 +26,6 @@ class SafetyCultureAssetFetcher:
         }
 
     async def __aenter__(self):
-        """Create optimized async HTTP session with connection pooling."""
         connector = aiohttp.TCPConnector(
             limit=100,
             limit_per_host=30,
@@ -42,12 +39,10 @@ class SafetyCultureAssetFetcher:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Close session on exit."""
         if self.session:
             await self.session.close()
 
     async def fetch_page(self, url: str) -> Dict:
-        """Fetch a single page from the API."""
         try:
             async with self.session.get(url) as response:
                 response.raise_for_status()
@@ -57,15 +52,6 @@ class SafetyCultureAssetFetcher:
             raise
 
     async def fetch_all_assets(self, output_file: str):
-        """
-        Fetch all assets with sequential pagination and incremental CSV writing.
-
-        This method optimizes for speed by:
-        1. Writing data immediately to CSV (no memory accumulation)
-        2. Using async I/O for non-blocking network operations
-        3. Reusing TCP connections with optimized pooling
-        4. Providing real-time progress feedback
-        """
         initial_url = f"{BASE_URL}/feed/assets"
         print("🚀 Starting high-performance asset fetch...")
         print(f"💾 Streaming results to: {output_file}")
@@ -79,41 +65,33 @@ class SafetyCultureAssetFetcher:
         csv_file = None
 
         try:
-            # Open CSV file for incremental writing
             csv_file = open(output_file, "w", newline="", encoding="utf-8")
 
             while url:
                 page_start = time.time()
 
-                # Fetch page data
                 response = await self.fetch_page(url)
                 data = response.get("data", [])
                 page_count += 1
                 total_assets += len(data)
 
-                # Initialize CSV writer on first page (use first row for headers)
                 if csv_writer is None and data:
                     fieldnames = data[0].keys()
                     csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
                     csv_writer.writeheader()
 
-                # Write data immediately to CSV
                 if csv_writer and data:
                     csv_writer.writerows(data)
-                    csv_file.flush()  # Ensure data is written immediately
+                    csv_file.flush()
 
-                # Calculate timing and progress metrics
                 page_time = time.time() - page_start
                 elapsed = time.time() - start_time
                 rate = page_count / elapsed if elapsed > 0 else 0
 
-                # Get metadata for remaining records estimate
                 metadata = response.get("metadata", {})
                 remaining_records = metadata.get("remaining_records", 0)
 
-                # Calculate ETA
                 if remaining_records > 0 and rate > 0:
-                    # Estimate based on average records per page
                     avg_records_per_page = (
                         total_assets / page_count if page_count > 0 else 25
                     )
@@ -125,7 +103,6 @@ class SafetyCultureAssetFetcher:
                 else:
                     eta_str = "calculating..."
 
-                # Real-time progress logging
                 print(
                     f"📄 Page {page_count}: {len(data)} assets | "
                     f"Total: {total_assets:,} | "
@@ -135,10 +112,8 @@ class SafetyCultureAssetFetcher:
                     f"ETA: {eta_str}"
                 )
 
-                # Get next page URL
                 next_url = metadata.get("next_page")
                 if next_url:
-                    # Handle relative URLs
                     if not next_url.startswith("http"):
                         next_url = f"{BASE_URL}{next_url}"
                     url = next_url
@@ -150,11 +125,9 @@ class SafetyCultureAssetFetcher:
             raise
 
         finally:
-            # Close CSV file
             if csv_file:
                 csv_file.close()
 
-        # Final statistics
         elapsed = time.time() - start_time
         rate = page_count / elapsed if elapsed > 0 else 0
         avg_page_time = elapsed / page_count if page_count > 0 else 0
@@ -182,13 +155,11 @@ class SafetyCultureAssetFetcher:
 
 
 def get_next_output_file() -> str:
-    """Generate unique output filename with timestamp."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_name = f"assets_{timestamp}"
     extension = ".csv"
     output_file = f"{base_name}{extension}"
 
-    # If file exists (unlikely with timestamp), add counter
     counter = 1
     while os.path.exists(output_file):
         output_file = f"{base_name}_{counter}{extension}"
@@ -198,7 +169,6 @@ def get_next_output_file() -> str:
 
 
 async def main():
-    """Main execution function."""
     if not TOKEN:
         print("❌ Error: TOKEN not set in script")
         print(
@@ -217,12 +187,10 @@ async def main():
     print("   - Real-time progress tracking")
     print("=" * 80)
 
-    # Generate output filename
     output_file = get_next_output_file()
 
     start_time = datetime.now()
 
-    # Fetch assets
     async with SafetyCultureAssetFetcher() as fetcher:
         await fetcher.fetch_all_assets(output_file)
 
