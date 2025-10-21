@@ -7,28 +7,22 @@ from typing import Dict, List
 import aiohttp
 from tqdm import tqdm
 
-TOKEN = ""  # Add your API token here
+TOKEN = ""
 BASE_URL = "https://api.safetyculture.io"
 
-# Rate limiting: 800 req/60sec for general endpoints, targeting 80% = 640 req/min
-TARGET_RATE_LIMIT = 640  # requests per 60 seconds
-RATE_LIMIT_WINDOW = 60  # seconds
-REQUESTS_PER_SECOND = TARGET_RATE_LIMIT / RATE_LIMIT_WINDOW  # ~10.67 req/sec
-REQUEST_DELAY = (
-    RATE_LIMIT_WINDOW / TARGET_RATE_LIMIT
-)  # ~0.09375 seconds between requests
+TARGET_RATE_LIMIT = 640
+RATE_LIMIT_WINDOW = 60
+REQUESTS_PER_SECOND = TARGET_RATE_LIMIT / RATE_LIMIT_WINDOW
+REQUEST_DELAY = RATE_LIMIT_WINDOW / TARGET_RATE_LIMIT
 
 
 class AsyncSafetyCultureClient:
-    """Async client for SafetyCulture API with rate limiting."""
-
     def __init__(self, base_url, api_token):
         self.base_url = base_url.rstrip("/")
         self.headers = {"Authorization": f"Bearer {api_token}"}
         self.session = None
-        # Semaphore to control concurrent requests
-        self.rate_limiter = asyncio.Semaphore(30)  # Max 30 concurrent requests
-        self.request_times = []  # Track request timing for rate limiting
+        self.rate_limiter = asyncio.Semaphore(30)
+        self.request_times = []
         self.stats = {
             "total_requests": 0,
             "rate_limit_delays": 0,
@@ -36,12 +30,8 @@ class AsyncSafetyCultureClient:
         }
 
     async def __aenter__(self):
-        """Create async HTTP session with connection pooling."""
         connector = aiohttp.TCPConnector(
-            limit=100,  # Total connection limit
-            limit_per_host=30,  # Per-host connection limit
-            ttl_dns_cache=300,
-            use_dns_cache=True,
+            limit=100, limit_per_host=30, ttl_dns_cache=300, use_dns_cache=True
         )
         timeout = aiohttp.ClientTimeout(total=90, connect=10)
         self.session = aiohttp.ClientSession(
@@ -50,43 +40,34 @@ class AsyncSafetyCultureClient:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Close session on exit."""
         if self.session:
             await self.session.close()
 
     async def _enforce_rate_limit(self):
-        """Enforce rate limiting to stay at 80% of API limit."""
         current_time = time.time()
 
-        # Remove requests older than the rate limit window
         self.request_times = [
             t for t in self.request_times if current_time - t < RATE_LIMIT_WINDOW
         ]
 
-        # If we're at the rate limit, wait before making next request
         if len(self.request_times) >= TARGET_RATE_LIMIT:
-            # Calculate how long to wait for the oldest request to age out
             oldest_request = self.request_times[0]
             wait_time = RATE_LIMIT_WINDOW - (current_time - oldest_request)
             if wait_time > 0:
                 self.stats["rate_limit_delays"] += 1
-                await asyncio.sleep(wait_time + 0.1)  # Add small buffer
+                await asyncio.sleep(wait_time + 0.1)
 
-        # Add small delay between requests to smooth out the rate
         await asyncio.sleep(REQUEST_DELAY)
 
-        # Record this request time
         self.request_times.append(time.time())
         self.stats["total_requests"] += 1
 
     async def _make_request(self, url, method="GET", **kwargs):
-        """Make rate-limited HTTP request."""
         async with self.rate_limiter:
             await self._enforce_rate_limit()
 
             try:
                 async with self.session.request(method, url, **kwargs) as response:
-                    # Handle rate limiting
                     if response.status == 429:
                         retry_after = int(response.headers.get("Retry-After", 60))
                         print(
@@ -104,7 +85,6 @@ class AsyncSafetyCultureClient:
                 raise
 
     def transform_feed_id(self, feed_id):
-        """Transform feed ID to UUID format if needed."""
         if "_" not in feed_id:
             return feed_id
         uuid_part = feed_id.split("_")[1]
@@ -113,7 +93,6 @@ class AsyncSafetyCultureClient:
         return uuid_part
 
     async def fetch_paginated_feed(self, endpoint):
-        """Fetch all pages from a paginated feed endpoint."""
         url = f"{self.base_url}{endpoint}"
         all_data = []
 
@@ -129,7 +108,6 @@ class AsyncSafetyCultureClient:
         return all_data
 
     async def get_template_by_id(self, template_id):
-        """Fetch a single template by ID."""
         try:
             response = await self._make_request(
                 f"{self.base_url}/templates/v1/templates/{template_id}"
@@ -139,16 +117,13 @@ class AsyncSafetyCultureClient:
             return None
 
     async def get_templates_batch(self, template_ids: List[str]) -> List[Dict]:
-        """Fetch multiple templates in parallel."""
         tasks = [self.get_template_by_id(tid) for tid in template_ids]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Filter out None results and exceptions
         templates = []
         for result in results:
             if result is not None and not isinstance(result, Exception):
                 templates.append(result)
-            # Small delay between processing results to prevent burst traffic
             await asyncio.sleep(0.05)
 
         return templates
@@ -157,10 +132,8 @@ class AsyncSafetyCultureClient:
 def process_template_permissions(
     template, template_summary, users_lookup, groups_lookup
 ):
-    """Process template permissions and return records."""
     records = []
     template_id, template_name = template.get("id", ""), template.get("name", "")
-    # Use owner_name from feed/templates data
     owner_name = template_summary.get("owner_name", "Unknown Owner")
     permissions = template.get("permissions", {})
 
@@ -193,7 +166,6 @@ def process_template_permissions(
 
 
 async def fetch_users_lookup(client):
-    """Fetch all users and create lookup dictionary."""
     print("🔍 Fetching users...")
     start_time = time.time()
 
@@ -214,7 +186,6 @@ async def fetch_users_lookup(client):
 
 
 async def fetch_groups_lookup(client):
-    """Fetch all groups and create lookup dictionary."""
     print("🔍 Fetching groups...")
     start_time = time.time()
 
@@ -233,7 +204,6 @@ async def fetch_groups_lookup(client):
 
 
 async def main():
-    """Main async execution function."""
     if not TOKEN:
         print("Error: Please set your SafetyCulture API token in the TOKEN variable")
         return 1
@@ -249,16 +219,13 @@ async def main():
     overall_start = time.time()
 
     async with AsyncSafetyCultureClient(BASE_URL, TOKEN) as client:
-        # Fetch lookups (fast, sequential is fine)
         users_lookup = await fetch_users_lookup(client)
         groups_lookup = await fetch_groups_lookup(client)
 
-        # Get list of all templates
         print("🔍 Fetching template list...")
         fetch_start = time.time()
         all_templates = await client.fetch_paginated_feed("/feed/templates")
 
-        # Filter out archived templates
         active_templates = [t for t in all_templates if not t.get("archived", False)]
         fetch_elapsed = time.time() - fetch_start
 
@@ -267,14 +234,11 @@ async def main():
             f"(out of {len(all_templates):,} total) in {fetch_elapsed:.2f}s\n"
         )
 
-        # Fetch detailed template data in parallel batches
         print("⚡ Fetching template details with parallel async requests...")
         print(
             f"   Processing with rate limit: {TARGET_RATE_LIMIT} req/{RATE_LIMIT_WINDOW}s\n"
         )
 
-        # Create lookup for template summaries to get owner_name
-        # Store both feed ID and transformed UUID for lookup
         template_summaries = {}
         template_ids = []
         for t in active_templates:
@@ -283,7 +247,7 @@ async def main():
             template_summaries[feed_id] = t
             template_summaries[transformed_id] = t
             template_ids.append(feed_id)
-        batch_size = 50  # Process in batches for better progress tracking
+        batch_size = 50
 
         all_template_details = []
         detail_start = time.time()
@@ -295,10 +259,8 @@ async def main():
                 all_template_details.extend(batch_results)
                 pbar.update(len(batch))
 
-                # Add delay after each batch to give API breathing room
                 await asyncio.sleep(0.5)
 
-                # Show rate statistics periodically
                 if (i // batch_size) % 5 == 0 and i > 0:
                     elapsed = time.time() - detail_start
                     rate = (
@@ -323,7 +285,6 @@ async def main():
         print(f"   Rate limit delays: {client.stats['rate_limit_delays']}")
         print(f"   Errors: {client.stats['errors']}\n")
 
-        # Process templates and write to CSV
         print("📝 Processing permissions and writing to CSV...")
         write_start = time.time()
 
@@ -366,7 +327,6 @@ async def main():
         write_elapsed = time.time() - write_start
         print(f"✓ Wrote {records_written:,} access rules in {write_elapsed:.2f}s\n")
 
-    # Final statistics
     overall_elapsed = time.time() - overall_start
     print("=" * 80)
     print("🎉 EXPORT COMPLETE!")
