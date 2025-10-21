@@ -1,6 +1,6 @@
 # Export Template Access Rules
 
-Exports all permission assignments for SafetyCulture templates via API. Fetches template access data and generates CSV output.
+High-performance async exporter for SafetyCulture template permission assignments. Uses parallel API calls with rate limiting to quickly fetch template access data and generate CSV output.
 
 ## Quick Start
 
@@ -34,8 +34,19 @@ Generates `template_access_rules.csv` with:
 - Endpoint: Template permissions API
 - [Documentation](https://developer.safetyculture.com/reference/)
 
+## Performance Features
+
+- **Async I/O**: Uses aiohttp for non-blocking parallel requests
+- **Rate limiting**: Automatically maintains 80% of API rate limit (640 req/60s)
+- **Connection pooling**: Optimized TCP connection reuse
+- **Progress tracking**: Real-time progress bars with rate statistics
+- **Batch processing**: Fetches templates in parallel batches for maximum speed
+
 ## Notes
 
 - Exports complete permission matrix for all templates
+- Optimized for large datasets - processes hundreds of templates in seconds
+- Automatically respects API rate limits with 429 retry handling
+- Uses owner_name from feed/templates for accurate template ownership
 - Useful for access auditing and compliance
 - Keep API tokens secure
