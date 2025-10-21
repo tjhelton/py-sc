@@ -138,7 +138,6 @@ def delete_actions(actions, chunk_number, total_chunks, log_filename):
 def main():
     print("🚀 Starting bulk action deletion process...")
 
-    # Validate API token is set
     if not TOKEN:
         print("❌ Error: TOKEN not set in script")
         print("Please set your token in the TOKEN variable at the top of main.py")
