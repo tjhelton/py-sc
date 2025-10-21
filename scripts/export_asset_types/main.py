@@ -38,7 +38,6 @@ def fetch_asset_types():
 
 
 def write_to_csv(asset_types, filename='asset_types_output.csv'):
-    """Write asset types data to CSV file"""
     if not asset_types:
         print("No asset types to write to CSV")
         return
