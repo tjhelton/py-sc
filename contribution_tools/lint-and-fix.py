@@ -66,6 +66,7 @@ def run_linters(fix_mode: bool = False) -> bool:
     # Only target script directories to preserve functionality
     script_patterns = [
         "../scripts/archive_templates/*.py",
+        "../scripts/assign_courses/*.py",
         "../scripts/create_groups/*.py",
         "../scripts/create_sites/*.py",
         "../scripts/deactivate_users/*.py",
@@ -74,6 +75,7 @@ def run_linters(fix_mode: bool = False) -> bool:
         "../scripts/delete_sites/*.py",
         "../scripts/export_asset_types/*.py",
         "../scripts/export_template_access_rules/*.py",
+        "../scripts/export_template_questions/*.py",
         "../scripts/fetch_group_assignees/*.py",
         "../scripts/fetch_issues/*.py",
         "../scripts/fetch_user_custom_fields/*.py",

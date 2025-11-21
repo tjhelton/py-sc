@@ -14,20 +14,20 @@ repos:
     hooks:
       - id: black
         language_version: python3
-        files: ^scripts/(archive_templates|create_groups|create_sites|deactivate_users|delete_actions|delete_assets|delete_sites|export_asset_types|export_template_access_rules|fetch_group_assignees|fetch_issues|fetch_user_custom_fields|get_public_issue_links|get_sites_without_activity|set_inspection_site|update_user_sites)/.*\.py$
+        files: ^scripts/(archive_templates|assign_courses|create_groups|create_sites|deactivate_users|delete_actions|delete_assets|delete_sites|export_asset_types|export_template_access_rules|export_template_questions|fetch_group_assignees|fetch_issues|fetch_user_custom_fields|get_public_issue_links|get_sites_without_activity|set_inspection_site|update_user_sites)/.*\.py$
         args: [--skip-string-normalization]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
       - id: isort
-        files: ^scripts/(archive_templates|create_groups|create_sites|deactivate_users|delete_actions|delete_assets|delete_sites|export_asset_types|export_template_access_rules|fetch_group_assignees|fetch_issues|fetch_user_custom_fields|get_public_issue_links|get_sites_without_activity|set_inspection_site|update_user_sites)/.*\.py$
+        files: ^scripts/(archive_templates|assign_courses|create_groups|create_sites|deactivate_users|delete_actions|delete_assets|delete_sites|export_asset_types|export_template_access_rules|export_template_questions|fetch_group_assignees|fetch_issues|fetch_user_custom_fields|get_public_issue_links|get_sites_without_activity|set_inspection_site|update_user_sites)/.*\.py$
 
   - repo: https://github.com/pycqa/flake8
     rev: 7.0.0
     hooks:
       - id: flake8
-        files: ^scripts/(archive_templates|create_groups|create_sites|deactivate_users|delete_actions|delete_assets|delete_sites|export_asset_types|export_template_access_rules|fetch_group_assignees|fetch_issues|fetch_user_custom_fields|get_public_issue_links|get_sites_without_activity|set_inspection_site|update_user_sites)/.*\.py$
+        files: ^scripts/(archive_templates|assign_courses|create_groups|create_sites|deactivate_users|delete_actions|delete_assets|delete_sites|export_asset_types|export_template_access_rules|export_template_questions|fetch_group_assignees|fetch_issues|fetch_user_custom_fields|get_public_issue_links|get_sites_without_activity|set_inspection_site|update_user_sites)/.*\.py$
         args: [--config=contribution_tools/.flake8]
         additional_dependencies:
           - flake8-bugbear
