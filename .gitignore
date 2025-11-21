@@ -5,6 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
+reorganize_phases.py
 
 # Open API spec
 open_api_spec.json
@@ -32,6 +33,9 @@ log_output.csv
 
 # Issues export directories (timestamped output from fetch_issues)
 issues_export_*/
+
+# Private API scripts (not for public repository)
+scripts/complete_inspections/
 
 # Common data file extensions
 *.xlsx
