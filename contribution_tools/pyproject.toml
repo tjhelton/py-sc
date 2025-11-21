@@ -4,6 +4,7 @@ target-version = ['py38']
 # Only target script directories, exclude everything else
 include = '''(
   scripts/archive_templates/.*\.py$
+  | scripts/assign_courses/.*\.py$
   | scripts/create_groups/.*\.py$
   | scripts/create_sites/.*\.py$
   | scripts/deactivate_users/.*\.py$
@@ -12,6 +13,7 @@ include = '''(
   | scripts/delete_sites/.*\.py$
   | scripts/export_asset_types/.*\.py$
   | scripts/export_template_access_rules/.*\.py$
+  | scripts/export_template_questions/.*\.py$
   | scripts/fetch_group_assignees/.*\.py$
   | scripts/fetch_issues/.*\.py$
   | scripts/fetch_user_custom_fields/.*\.py$
@@ -50,6 +52,7 @@ line_length = 88
 # Only target script directories
 src_paths = [
     "../scripts/archive_templates",
+    "../scripts/assign_courses",
     "../scripts/create_groups",
     "../scripts/create_sites",
     "../scripts/deactivate_users",
@@ -58,6 +61,7 @@ src_paths = [
     "../scripts/delete_sites",
     "../scripts/export_asset_types",
     "../scripts/export_template_access_rules",
+    "../scripts/export_template_questions",
     "../scripts/fetch_group_assignees",
     "../scripts/fetch_issues",
     "../scripts/fetch_user_custom_fields",
@@ -98,6 +102,7 @@ explicit_package_bases = true
 # Only check script directories
 files = [
     "../scripts/archive_templates",
+    "../scripts/assign_courses",
     "../scripts/create_groups",
     "../scripts/create_sites",
     "../scripts/deactivate_users",
@@ -106,6 +111,7 @@ files = [
     "../scripts/delete_sites",
     "../scripts/export_asset_types",
     "../scripts/export_template_access_rules",
+    "../scripts/export_template_questions",
     "../scripts/fetch_group_assignees",
     "../scripts/fetch_issues",
     "../scripts/fetch_user_custom_fields",
