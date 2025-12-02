@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import requests
 
-TOKEN = "38bc6f0787a370c972fc42efcd419c380048910aa4d0452df7485d679e8fc2eb"  # INSERT API TOKEN HERE, NOTHING ELSE IS NEEDED
+TOKEN = ""  # INSERT API TOKEN HERE, NOTHING ELSE IS NEEDED
 
 
 def assign_course_to_sites(course_id, site_ids, count):
@@ -12,7 +12,8 @@ def assign_course_to_sites(course_id, site_ids, count):
             f"https://api.safetyculture.io/training/courses/v1/{course_id}/assignments"
         )
         assignments = [
-            {"type": "ASSIGNMENT_TYPE_SITE", "id": site_id} for site_id in site_ids
+            {"type": "ASSIGNMENT_TYPE_SITE", "id": site_id, "is_assigned": True}
+            for site_id in site_ids
         ]
         payload = {"assignments": assignments}
         headers = {
