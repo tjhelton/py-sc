@@ -43,6 +43,7 @@ python main.py
 - **[delete_actions/](scripts/delete_actions/)** - Delete SafetyCulture actions in bulk (batches of 300)
 - **[delete_assets/](scripts/delete_assets/)** - Archive SafetyCulture assets with detailed logging
 - **[export_asset_types/](scripts/export_asset_types/)** - Export asset type definitions
+- **[export_issue_relations/](scripts/export_issue_relations/)** - Export issue relationship data to CSV
 - **[fetch_issues/](scripts/fetch_issues/)** - Extract all issues with detailed tracking data
 - **[get_public_issue_links/](scripts/get_public_issue_links/)** - Generate public sharing links
 

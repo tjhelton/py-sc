@@ -9,6 +9,7 @@ reorganize_phases.py
 
 # Open API spec
 open_api_spec.json
+openapiv2/
 
 # Claude Code
 .claude/
