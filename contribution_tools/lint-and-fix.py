@@ -74,6 +74,7 @@ def run_linters(fix_mode: bool = False) -> bool:
         "../scripts/delete_assets/*.py",
         "../scripts/delete_sites/*.py",
         "../scripts/export_asset_types/*.py",
+        "../scripts/export_issue_relations/*.py",
         "../scripts/export_template_access_rules/*.py",
         "../scripts/export_template_questions/*.py",
         "../scripts/fetch_group_assignees/*.py",
