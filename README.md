@@ -39,6 +39,9 @@ python main.py
 - **[set_inspection_site/](scripts/set_inspection_site/)** - Configure audit-site relationships
 - **[update_user_sites/](scripts/update_user_sites/)** - Bulk update user site assignments
 
+### Contractor Management
+- **[export_contractor_companies/](scripts/export_contractor_companies/)** - Export contractor company records (all JSON fields) to CSV
+
 ### Issues, Actions & Assets
 - **[delete_actions/](scripts/delete_actions/)** - Delete SafetyCulture actions in bulk (batches of 300)
 - **[delete_assets/](scripts/delete_assets/)** - Archive SafetyCulture assets with detailed logging
