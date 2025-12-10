@@ -27,28 +27,49 @@ python main.py
 
 > **💡 Each script has its own README with detailed setup instructions, input formats, and usage examples. Click any script link below to view its complete documentation.**
 
-### Template Management
-- **[archive_templates/](scripts/archive_templates/)** - Archive SafetyCulture templates in bulk
-- **[export_template_access_rules/](scripts/export_template_access_rules/)** - Export template permission matrices
+### Actions
+- **[delete_actions/](scripts/actions/delete_actions/)** - Delete SafetyCulture actions in bulk (batches of 300)
+- **[delete_action_schedules/](scripts/actions/delete_action_schedules/)** - Delete action schedules with efficient async pagination
 
-### Site Management
-- **[create_groups/](scripts/create_groups/)** - Create SafetyCulture groups
-- **[create_sites/](scripts/create_sites/)** - Create SafetyCulture sites with hierarchy support
-- **[delete_sites/](scripts/delete_sites/)** - Delete SafetyCulture sites in bulk
-- **[get_sites_without_activity/](scripts/get_sites_without_activity/)** - Identify inactive sites
-- **[set_inspection_site/](scripts/set_inspection_site/)** - Configure audit-site relationships
-- **[update_user_sites/](scripts/update_user_sites/)** - Bulk update user site assignments
+### Assets
+- **[export_assets/](scripts/assets/export_assets/)** - High-performance asset export to CSV
+- **[export_asset_types/](scripts/assets/export_asset_types/)** - Export asset type definitions
+- **[delete_assets/](scripts/assets/delete_assets/)** - Archive-then-delete assets with colored output
 
-### Contractor Management
-- **[export_contractor_companies/](scripts/export_contractor_companies/)** - Export contractor company records (all JSON fields) to CSV
+### Courses
+- **[assign_courses/](scripts/courses/assign_courses/)** - Assign training courses to sites in bulk
 
-### Issues, Actions & Assets
-- **[delete_actions/](scripts/delete_actions/)** - Delete SafetyCulture actions in bulk (batches of 300)
-- **[delete_assets/](scripts/delete_assets/)** - Archive SafetyCulture assets with detailed logging
-- **[export_asset_types/](scripts/export_asset_types/)** - Export asset type definitions
-- **[export_issue_relations/](scripts/export_issue_relations/)** - Export issue relationship data to CSV
-- **[fetch_issues/](scripts/fetch_issues/)** - Extract all issues with detailed tracking data
-- **[get_public_issue_links/](scripts/get_public_issue_links/)** - Generate public sharing links
+### Groups
+- **[create_groups/](scripts/groups/create_groups/)** - Create SafetyCulture groups
+- **[export_group_assignees/](scripts/groups/export_group_assignees/)** - Export group assignee information
+
+### Inspections
+- **[update_inspection_site/](scripts/inspections/update_inspection_site/)** - Configure inspection-site relationships
+
+### Issues
+- **[export_issue_relations/](scripts/issues/export_issue_relations/)** - Export issue relationship data to CSV
+- **[export_issue_public_links/](scripts/issues/export_issue_public_links/)** - Generate public sharing links for issues
+
+### Organizations
+- **[export_contractor_companies/](scripts/organizations/export_contractor_companies/)** - Export contractor company records to CSV
+
+### Sites
+- **[create_sites/](scripts/sites/create_sites/)** - Create SafetyCulture sites with hierarchy support
+- **[delete_sites/](scripts/sites/delete_sites/)** - Delete SafetyCulture sites in bulk
+- **[export_sites_inactive/](scripts/sites/export_sites_inactive/)** - Identify and export inactive sites
+- **[update_site_users/](scripts/sites/update_site_users/)** - Bulk update user site assignments
+
+### Templates
+- **[archive_templates/](scripts/templates/archive_templates/)** - Archive SafetyCulture templates in bulk
+- **[export_template_access_rules/](scripts/templates/export_template_access_rules/)** - Export template permission matrices
+- **[export_template_questions/](scripts/templates/export_template_questions/)** - Export template questions and structure
+
+### Users
+- **[deactivate_users/](scripts/users/deactivate_users/)** - Deactivate user accounts in bulk
+- **[export_user_custom_fields/](scripts/users/export_user_custom_fields/)** - Export user custom field data
+
+### Admin Tools
+- **[nuke_account/](scripts/nuke_account/)** - ⚠️ Comprehensive account cleanup tool (use with extreme caution)
 
 ## 🛠️ Development
 

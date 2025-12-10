@@ -27,6 +27,8 @@ SITE_DELETE_BATCH_SIZE = 40
 DELETE_CONCURRENCY = 16
 LIST_CONCURRENCY = 8
 DELETE_FLUSH_THRESHOLD = 400
+FETCH_BAR_FORMAT = "{desc:<22} {n_fmt}{unit} [{elapsed}, {rate_fmt}]"
+DELETE_BAR_FORMAT = "{desc:<22} {n_fmt}/{total_fmt}{unit} [{elapsed}, {rate_fmt}]"
 
 
 @dataclass
@@ -44,21 +46,25 @@ class ResourceStats:
 
 
 class ProgressTracker:
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, position: int = 0) -> None:
         self._lock = asyncio.Lock()
         self.fetch_bar = tqdm(
             total=0,
             desc=f"{name} fetched",
-            unit="item",
+            unit=" items",
             dynamic_ncols=True,
             leave=False,
+            bar_format=FETCH_BAR_FORMAT,
+            position=position,
         )
         self.delete_bar = tqdm(
             total=0,
             desc=f"{name} deleted",
-            unit="item",
+            unit=" items",
             dynamic_ncols=True,
             leave=False,
+            bar_format=DELETE_BAR_FORMAT,
+            position=position + 1,
         )
 
     async def add_fetched(self, count: int) -> None:
@@ -233,7 +239,10 @@ class SafetyCultureNuker:
             tracker.close()
 
     async def _delete_actions_batch(
-        self, action_ids: List[str], stats: ResourceStats, tracker: Optional[ProgressTracker]
+        self,
+        action_ids: List[str],
+        stats: ResourceStats,
+        tracker: Optional[ProgressTracker],
     ) -> None:
         if not action_ids:
             return
@@ -249,7 +258,9 @@ class SafetyCultureNuker:
                 if tracker:
                     await tracker.add_deleted(len(action_ids))
             except Exception as error:  # noqa: BLE001
-                stats.record_failure(f"actions {action_ids[:3]}...: {error}", len(action_ids))
+                stats.record_failure(
+                    f"actions {action_ids[:3]}...: {error}", len(action_ids)
+                )
 
     async def delete_investigations(self) -> ResourceStats:
         stats = ResourceStats("issues")
@@ -347,7 +358,6 @@ class SafetyCultureNuker:
         delete_tasks: List[asyncio.Task] = []
         tracker = ProgressTracker("assets")
         seen_ids: set[str] = set()
-        in_progress: set[asyncio.Task] = set()
 
         try:
             for state_filter in (None, "ASSET_STATE_ARCHIVED"):
@@ -363,25 +373,35 @@ class SafetyCultureNuker:
                         "POST", "/assets/v1/assets/list", json_body=payload
                     )
                     assets = data.get("assets", []) or []
-                    ids: List[str] = []
+                    assets_for_page: List[Tuple[str, bool]] = []
                     for asset in assets:
                         asset_id = asset.get("id")
                         if not asset_id or asset_id in seen_ids:
                             continue
                         seen_ids.add(asset_id)
-                        ids.append(asset_id)
+                        state = asset.get("state")
+                        is_archived = (
+                            state == "ASSET_STATE_ARCHIVED"
+                            or state_filter == "ASSET_STATE_ARCHIVED"
+                        )
+                        assets_for_page.append((asset_id, is_archived))
 
-                    stats.fetched += len(ids)
-                    await tracker.add_fetched(len(ids))
+                    stats.fetched += len(assets_for_page)
+                    await tracker.add_fetched(len(assets_for_page))
 
-                    for asset_id in ids:
+                    for asset_id, is_archived in assets_for_page:
+                        archive_path = (
+                            None
+                            if is_archived
+                            else f"/assets/v1/assets/{asset_id}/archive"
+                        )
                         task = asyncio.create_task(
                             self._delete_single(
                                 f"/assets/v1/assets/{asset_id}",
                                 stats,
                                 label=f"asset {asset_id}",
                                 tracker=tracker,
-                                archive_path=f"/assets/v1/assets/{asset_id}/archive",
+                                archive_path=archive_path,
                             )
                         )
                         delete_tasks.append(task)
@@ -483,10 +503,9 @@ class SafetyCultureNuker:
 
                 for company in companies:
                     company_id = company.get("company_id")
-                    company_type = (
-                        (company.get("company_type") or {}).get("id")
-                        or company.get("company_type_id")
-                    )
+                    company_type = (company.get("company_type") or {}).get(
+                        "id"
+                    ) or company.get("company_type_id")
                     if not company_id:
                         continue
                     params = {"company_id": company_id}
@@ -544,7 +563,9 @@ class SafetyCultureNuker:
                     in_flight.append(
                         (
                             page_number,
-                            asyncio.create_task(fetch_cases_page(page_number=page_number)),
+                            asyncio.create_task(
+                                fetch_cases_page(page_number=page_number)
+                            ),
                         )
                     )
                     page_number += 1
@@ -578,7 +599,10 @@ class SafetyCultureNuker:
                         delete_tasks.clear()
 
                     next_token = data.get("next_page_token") or next_token
-                    if len(cases) < OSHA_PAGE_SIZE or current_page >= OSHA_MAX_PAGE_NUMBER:
+                    if (
+                        len(cases) < OSHA_PAGE_SIZE
+                        or current_page >= OSHA_MAX_PAGE_NUMBER
+                    ):
                         token_mode = bool(next_token)
                         if not token_mode and len(cases) < OSHA_PAGE_SIZE:
                             break
@@ -677,7 +701,7 @@ class SafetyCultureNuker:
                 for folder_entry in folders:
                     folder_data = folder_entry.get("folder") or folder_entry
                     folder_id = folder_data.get("id")
-                    ancestors = folder_entry.get("ancestors") or []
+                    # ancestors = folder_entry.get("ancestors") or []
                     is_deleted = folder_data.get("deleted") is True
                     if folder_id and not is_deleted:
                         ids.append(folder_id)
@@ -732,7 +756,9 @@ class SafetyCultureNuker:
                 if tracker:
                     await tracker.add_deleted(len(folder_ids))
             except Exception as error:  # noqa: BLE001
-                stats.record_failure(f"sites {folder_ids[:3]}...: {error}", len(folder_ids))
+                stats.record_failure(
+                    f"sites {folder_ids[:3]}...: {error}", len(folder_ids)
+                )
 
     async def _delete_single(
         self,
@@ -776,6 +802,31 @@ class SafetyCultureNuker:
                 stats.record_failure(f"{label}: {error}")
 
 
+def format_run_result(stats: ResourceStats) -> str:
+    if stats.fetched == 0:
+        if stats.failed:
+            return f"⚠️ {stats.name}: nothing deleted ({stats.failed} failed)"
+        return f"✅ {stats.name}: nothing to delete"
+    status = "✅" if stats.failed == 0 else "⚠️"
+    return (
+        f"{status} {stats.name}: {stats.deleted}/{stats.fetched} deleted "
+        f"({stats.failed} failed)"
+    )
+
+
+def format_summary(stats: ResourceStats) -> str:
+    if stats.fetched == 0:
+        if stats.failed:
+            return f"⚠️ {stats.name}: nothing deleted ({stats.failed} failed)"
+        return f"✅ {stats.name}: nothing to delete"
+    status = "✅" if stats.failed == 0 else "⚠️"
+    batch_info = f", batches {stats.batches}" if stats.batches else ""
+    return (
+        f"{status} {stats.name}: deleted {stats.deleted}/{stats.fetched} "
+        f"(failed {stats.failed}{batch_info})"
+    )
+
+
 async def run_nuke(args: argparse.Namespace) -> None:
     token = args.token or os.environ.get("SC_API_TOKEN") or TOKEN
     if not token:
@@ -817,30 +868,21 @@ async def run_nuke(args: argparse.Namespace) -> None:
         for name, method in targets:
             if name in skip_resources:
                 continue
-            print(f"\n🚧 Deleting {name}...")
+            tqdm.write(f"\nDeleting {name}...")
             stats: ResourceStats = await method(nuker)  # type: ignore[misc]
             summaries.append(stats)
-            print(
-                f"   -> {stats.deleted}/{stats.fetched} deleted "
-                f"({stats.failed} failed)"
-            )
+            tqdm.write(f"   {format_run_result(stats)}")
             if stats.errors:
                 for err in stats.errors[:5]:
-                    print(f"      ⚠️  {err}")
+                    tqdm.write(f"   ⚠️ {err}")
                 if len(stats.errors) > 5:
-                    print(f"      ... {len(stats.errors) - 5} more errors not shown")
+                    tqdm.write(f"   ... {len(stats.errors) - 5} more errors not shown")
 
-    print("\n✅ Nuke run finished")
     any_failed = any(s.failed > 0 for s in summaries)
-    badge = "🔴" if any_failed else "🟢"
+    overall_status = "⚠️" if any_failed else "✅"
+    print(f"\n{overall_status} Nuke run finished")
     for stats in summaries:
-        if stats.fetched == 0:
-            print(f"{badge} {stats.name}: no {stats.name} to delete")
-            continue
-        print(
-            f"{badge} {stats.name}: deleted {stats.deleted}/{stats.fetched} "
-            f"(failed {stats.failed}, batches {stats.batches})"
-        )
+        print(format_summary(stats))
 
 
 def parse_args() -> argparse.Namespace:
