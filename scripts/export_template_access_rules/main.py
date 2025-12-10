@@ -7,7 +7,7 @@ from typing import Dict, List
 import aiohttp
 from tqdm import tqdm
 
-TOKEN = ""
+TOKEN = ""  # Set your SafetyCulture API token here
 BASE_URL = "https://api.safetyculture.io"
 
 TARGET_RATE_LIMIT = 640

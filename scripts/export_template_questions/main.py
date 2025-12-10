@@ -4,7 +4,7 @@ import csv
 import aiohttp
 import requests
 
-TOKEN = ""
+TOKEN = ""  # Set your SafetyCulture API token here
 
 HEADERS = {
     "Authorization": f"Bearer {TOKEN}",
@@ -13,7 +13,6 @@ HEADERS = {
 
 
 def fetch_all_templates():
-    """Fetch all templates using the paginated datafeed API."""
     templates = []
     url = "https://api.safetyculture.io/feed/templates"
 
@@ -31,7 +30,6 @@ def fetch_all_templates():
 
     print(f"Total templates fetched: {len(templates)}")
 
-    # Filter out archived templates
     active_templates = [t for t in templates if not t.get("archived", False)]
     archived_count = len(templates) - len(active_templates)
     print(f"Filtered out {archived_count} archived templates")
@@ -41,7 +39,6 @@ def fetch_all_templates():
 
 
 def fetch_template_json(template_id):
-    """Fetch the full JSON structure for a specific template."""
     url = f"https://api.safetyculture.io/templates/v1/templates/{template_id}"
     response = requests.get(url, headers=HEADERS, timeout=30)
     response.raise_for_status()
@@ -49,7 +46,6 @@ def fetch_template_json(template_id):
 
 
 async def fetch_template_json_async(session, template_id, template_name, semaphore):
-    """Async fetch the full JSON structure for a specific template with retry logic."""
     url = f"https://api.safetyculture.io/templates/v1/templates/{template_id}"
     max_retries = 3
     base_delay = 2  # seconds
@@ -66,7 +62,6 @@ async def fetch_template_json_async(session, template_id, template_name, semapho
 
                     if status_code == 200:
                         json_data = await response.json()
-                        # Extract actual template name from response
                         actual_name = json_data.get("template", {}).get(
                             "name", template_name
                         )
@@ -78,7 +73,6 @@ async def fetch_template_json_async(session, template_id, template_name, semapho
                             "data": json_data,
                         }
                     else:
-                        # Try to get response body for error details
                         try:
                             error_body = await response.text()
                         except Exception:
@@ -87,14 +81,12 @@ async def fetch_template_json_async(session, template_id, template_name, semapho
                         error_msg = f"HTTP {status_code}: {error_body[:200]}"
                         print(f"  ✗ Failed: {template_name} - {error_msg}")
 
-                        # If not the last attempt, wait and retry
                         if attempt < max_retries - 1:
                             delay = base_delay * (2**attempt)  # Exponential backoff
                             print(f"    Retrying in {delay}s...")
                             await asyncio.sleep(delay)
                             continue
 
-                        # Last attempt failed
                         return {
                             "success": False,
                             "template_id": template_id,
@@ -147,22 +139,6 @@ def extract_questions(
     template_id="",
     template_name="",
 ):
-    """
-    Recursively extract all questions from template items.
-
-    Args:
-        items: List of template items to process
-        response_sets: Dictionary of response sets from template (keyed by response set ID)
-        page_id: ID of the page (section item type)
-        page_label: Label of the page
-        section_id: ID of the section (category item type)
-        section_label: Label of the section
-        template_id: ID of the template
-        template_name: Name of the template
-
-    Returns:
-        List of question dictionaries with required fields
-    """
     if response_sets is None:
         response_sets = {}
     questions = []
@@ -193,12 +169,10 @@ def extract_questions(
             )
             continue
 
-        # Extract possible responses for list and question types
         possible_responses = ""
         if item_type and item_type in item:
             type_data = item[item_type]
             if isinstance(type_data, dict):
-                # First try to get response_set_id and look it up
                 response_set_id = type_data.get("response_set_id")
                 if response_set_id and response_set_id in response_sets:
                     response_set = response_sets[response_set_id]
@@ -207,7 +181,6 @@ def extract_questions(
                         r.get("label", "") for r in responses if isinstance(r, dict)
                     ]
                     possible_responses = "; ".join(response_labels)
-                # Fallback to inline responses if no response_set_id
                 elif "responses" in type_data:
                     responses = type_data.get("responses", [])
                     response_labels = [
@@ -216,10 +189,7 @@ def extract_questions(
                     possible_responses = "; ".join(response_labels)
 
         if item_type:
-            # Skip page and section items themselves (we only want actual questions)
-            # but we'll still process their children for hierarchy tracking
             if item_type not in ["section", "category"]:
-                # Map item types to more descriptive names
                 display_type = item_type
 
                 questions.append(
@@ -238,21 +208,17 @@ def extract_questions(
                 )
 
         if children:
-            # Determine page and section context for children based on current item type
             if item_type == "section":
-                # Current item is a page, pass it as page context
                 child_page_id = item_id
                 child_page_label = item_label
                 child_section_id = None
                 child_section_label = None
             elif item_type == "category":
-                # Current item is a section, pass it as section context
                 child_page_id = page_id
                 child_page_label = page_label
                 child_section_id = item_id
                 child_section_label = item_label
             else:
-                # For all other types, pass through current context
                 child_page_id = page_id
                 child_page_label = page_label
                 child_section_id = section_id
@@ -275,32 +241,26 @@ def extract_questions(
 
 
 async def main():
-    """Main function to fetch templates and export questions to CSV."""
     print("Starting template questions export...\n")
 
-    # Prompt user for template selection
     print("=" * 60)
     user_input = input(
         "Enter template IDs (comma-separated) or 'all' to fetch everything: "
     ).strip()
     print("=" * 60 + "\n")
 
-    # Determine which templates to fetch
     if user_input.lower() == "all":
         print("Fetching all templates from feed...\n")
         templates = fetch_all_templates()
     else:
-        # Parse comma-separated template IDs
         template_ids = [tid.strip() for tid in user_input.split(",") if tid.strip()]
         if not template_ids:
             print("Error: No template IDs provided. Exiting.")
             return
 
         print(f"Using {len(template_ids)} specified template ID(s)...\n")
-        # Create template objects with just IDs (names will be populated during fetch)
         templates = [{"id": tid, "name": f"Template {tid}"} for tid in template_ids]
 
-    # Fetch all templates asynchronously with rate limiting
     max_concurrent = 10  # Limit concurrent requests to avoid overwhelming API
     print(
         f"Fetching {len(templates)} template JSONs (max {max_concurrent} concurrent)...\n"
@@ -321,7 +281,6 @@ async def main():
     print("FETCHING COMPLETE - Processing results...")
     print("=" * 60 + "\n")
 
-    # Process results and extract questions
     all_questions = []
     failed_templates = []
     successful_count = 0
@@ -348,7 +307,6 @@ async def main():
             template_data = result["data"].get("template", {})
             items = template_data.get("items", [])
 
-            # Extract response_sets as a dictionary keyed by response set ID
             response_sets_list = template_data.get("response_sets", [])
             response_sets = {
                 rs.get("id"): rs for rs in response_sets_list if isinstance(rs, dict)
@@ -406,7 +364,6 @@ async def main():
 
     print(f"\nExport complete! {len(all_questions)} questions written to {output_file}")
 
-    # Print success report
     print("\n" + "=" * 60)
     print("EXPORT SUMMARY")
     print("=" * 60)

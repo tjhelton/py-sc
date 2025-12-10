@@ -7,7 +7,7 @@ from typing import Dict
 
 import aiohttp
 
-TOKEN = ""
+TOKEN = ""  # Set your SafetyCulture API token here
 BASE_URL = "https://api.safetyculture.io"
 
 

@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import requests
 
-TOKEN = ''
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def import_csv():

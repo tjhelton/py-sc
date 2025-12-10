@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import requests
 
-TOKEN = ""  # Add your SafetyCulture API token here
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def init_csv_log():

@@ -2,7 +2,7 @@ import csv
 
 import requests
 
-TOKEN = ""  # Add your API token here
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def fetch_issue_relations():
@@ -26,7 +26,6 @@ def fetch_issue_relations():
             f"Fetched page {count}, page items: {len(data)}, total items: {len(items)}"
         )
 
-        # Get next page URL
         relative_url = response.get("metadata", {}).get("next_page")
 
     return items
@@ -37,7 +36,6 @@ def save_to_csv(items, filename="issue_relations.csv"):
         print("No data available to write.")
         return
 
-    # Extract CSV header from the keys of the first item
     headers = items[0].keys()
 
     with open(filename, "w", newline="", encoding="utf-8") as csvfile:

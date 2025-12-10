@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import requests
 
-TOKEN = ""  # INSERT API TOKEN HERE, NOTHING ELSE IS NEEDED
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def assign_course_to_sites(course_id, site_ids, count):

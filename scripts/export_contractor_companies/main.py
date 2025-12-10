@@ -7,12 +7,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
-# Set your SafetyCulture API token here
-TOKEN = ''
+TOKEN = ""  # Set your SafetyCulture API token here
 
 BASE_URL = "https://api.safetyculture.io"
 LIST_COMPANIES_ENDPOINT = f"{BASE_URL}/companies/v1beta/companies"
-PAGE_SIZE = 100  # As per OpenAPI spec: page_size + page_token pagination
+PAGE_SIZE = 100
 OPENAPI_SPEC_PATH = Path(__file__).resolve().parents[2] / "apidocs.openapi.json"
 
 
@@ -22,7 +21,6 @@ def _collect_schema_fields(
     prefix: str = "",
     stack: Optional[List[str]] = None,
 ) -> List[str]:
-    """Collect dotted field paths from a schema (follows $ref entries)."""
     stack = stack or []
     if not schema:
         return [prefix] if prefix else []
@@ -58,7 +56,6 @@ def _collect_schema_fields(
 
 
 def load_spec_fieldnames() -> List[str]:
-    """Use the OpenAPI spec to pre-seed CSV column order for ContractorCompany."""
     if not OPENAPI_SPEC_PATH.exists():
         print("⚠️  OpenAPI spec not found; deriving columns from API data only.")
         return []
@@ -67,7 +64,7 @@ def load_spec_fieldnames() -> List[str]:
         with OPENAPI_SPEC_PATH.open(encoding="utf-8") as spec_file:
             spec = json.load(spec_file)
         components = spec.get("components", {}).get("schemas", {})
-    except Exception as exc:  # pragma: no cover - defensive for runtime use
+    except Exception as exc:
         print(f"⚠️  Unable to read OpenAPI spec ({exc}); deriving columns from data.")
         return []
 
@@ -75,11 +72,10 @@ def load_spec_fieldnames() -> List[str]:
         {"$ref": "#/components/schemas/s12.contractors.v1.ContractorCompany"},
         components,
     )
-    return list(dict.fromkeys(fields))  # preserve order, drop duplicates
+    return list(dict.fromkeys(fields))
 
 
 def flatten_record(data: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
-    """Flatten nested dictionaries into dot-notation keys for CSV writing."""
     flattened: Dict[str, Any] = {}
 
     for key, value in data.items():
@@ -102,7 +98,6 @@ def flatten_record(data: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
 
 
 def fetch_contractor_companies(token: str) -> List[Dict[str, Any]]:
-    """Call the List Companies endpoint with page_size/page_token pagination."""
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -153,7 +148,6 @@ def fetch_contractor_companies(token: str) -> List[Dict[str, Any]]:
 def prepare_rows(
     companies: List[Dict[str, Any]], base_fieldnames: List[str]
 ) -> Tuple[List[str], List[Dict[str, Any]]]:
-    """Flatten all companies and assemble the full CSV header."""
     fieldnames = list(base_fieldnames)
     rows: List[Dict[str, Any]] = []
 
@@ -168,7 +162,6 @@ def prepare_rows(
 
 
 def write_csv(rows: List[Dict[str, Any]], fieldnames: List[str], output_path: Path):
-    """Write flattened company rows to CSV."""
     with output_path.open("w", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()

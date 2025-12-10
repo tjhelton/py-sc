@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 import pandas as pd
 import requests
 
-TOKEN = ""
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def delete_sites_batch(site_ids, batch_number, total_batches):
