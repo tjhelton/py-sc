@@ -65,28 +65,17 @@ def run_linters(fix_mode: bool = False) -> bool:
 
     # Only target script directories to preserve functionality
     script_patterns = [
-        "../scripts/archive_templates/*.py",
-        "../scripts/assign_courses/*.py",
-        "../scripts/complete_inspections/*.py",
-        "../scripts/create_groups/*.py",
-        "../scripts/create_sites/*.py",
-        "../scripts/deactivate_users/*.py",
-        "../scripts/delete_actions/*.py",
-        "../scripts/delete_assets/*.py",
-        "../scripts/delete_sites/*.py",
-        "../scripts/export_asset_types/*.py",
-        "../scripts/export_contractor_companies/*.py",
-        "../scripts/export_issue_relations/*.py",
-        "../scripts/export_template_access_rules/*.py",
-        "../scripts/export_template_questions/*.py",
-        "../scripts/fetch_assets/*.py",
-        "../scripts/fetch_group_assignees/*.py",
-        "../scripts/fetch_issues/*.py",
-        "../scripts/fetch_user_custom_fields/*.py",
-        "../scripts/get_public_issue_links/*.py",
-        "../scripts/get_sites_without_activity/*.py",
-        "../scripts/set_inspection_site/*.py",
-        "../scripts/update_user_sites/*.py"
+        "../scripts/actions/*/*.py",
+        "../scripts/assets/*/*.py",
+        "../scripts/courses/*/*.py",
+        "../scripts/groups/*/*.py",
+        "../scripts/inspections/*/*.py",
+        "../scripts/issues/*/*.py",
+        "../scripts/nuke_account/*.py",
+        "../scripts/organizations/*/*.py",
+        "../scripts/sites/*/*.py",
+        "../scripts/templates/*/*.py",
+        "../scripts/users/*/*.py",
     ]
 
     # Expand glob patterns to find actual files

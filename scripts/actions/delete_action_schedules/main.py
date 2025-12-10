@@ -305,9 +305,7 @@ async def main() -> int:
 
         unique_pairs = deduplicate_pairs(pairs)
         if len(unique_pairs) < len(pairs):
-            print(
-                f"Deduplicated schedule pairs: {len(pairs)} -> {len(unique_pairs)}."
-            )
+            print(f"Deduplicated schedule pairs: {len(pairs)} -> {len(unique_pairs)}.")
         pairs = unique_pairs
 
         print(
