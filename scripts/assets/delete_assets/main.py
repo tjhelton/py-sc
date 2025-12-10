@@ -17,7 +17,7 @@ class Colors:
     BOLD = "\033[1m"
 
 
-TOKEN = "scapi_ox-Hz8CqXXqF1Q9jiiRFiv_0SrDiLUvT40El4Pjbn0P0fPaJFCIf4GQbSUm_tT67kUGwmV2zfevHqP5DnB-Z5YBsI4o-SyW2VjavNu6IudqeKxUykYAHxVDmE9mmwxE12bTC95J5HukYLTAgwdpD8QjlHb9TvKGmJTY2ZcKDbHk"  # Set your SafetyCulture API token here
+TOKEN = ""  # Set your SafetyCulture API token here
 
 BASE_URL = "https://api.safetyculture.io"
 LIST_ASSETS_URL = f"{BASE_URL}/assets/v1/assets/list"
