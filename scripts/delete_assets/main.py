@@ -1,397 +1,465 @@
-#!/usr/bin/env python3
-"""
-SafetyCulture Asset Archive Script
-
-This script reads asset UUIDs from an input CSV file and archives them in SafetyCulture
-using their API. It provides live logging of the archiving process to an output CSV file.
-
-Usage:
-    python delete_assets.py --api-token YOUR_API_TOKEN --input input.csv --output output.csv
-
-Requirements:
-    - pandas
-    - requests
-    - python-dotenv (optional, for environment variables)
-
-API Endpoint: PATCH /assets/v1/assets/{id}/archive
-"""
-
-import argparse
+import asyncio
 import csv
-import logging
-import sys
-import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, Iterable, List, Optional, Tuple
 
-import pandas as pd
-import requests
-
-TOKEN = ""  # Add your SafetyCulture API token here
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+import aiohttp
 
 
-class SafetyCultureAssetArchiver:
-    """
-    A class to handle archiving of SafetyCulture assets via their API.
-    """
+# ANSI color codes for terminal output
+class Colors:
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
 
-    def __init__(self, api_token: str, base_url: str = "https://api.safetyculture.io"):
+
+TOKEN = ""  # Set your SafetyCulture API token here
+
+BASE_URL = "https://api.safetyculture.io"
+LIST_ASSETS_URL = f"{BASE_URL}/assets/v1/assets/list"
+DELETE_ASSET_URL = f"{BASE_URL}/assets/v1/assets"
+ARCHIVE_ASSET_URL = f"{BASE_URL}/assets/v1/assets"
+
+# Tweak these to suit your org's limits
+PAGE_SIZE = 100  # Maximum allowed by the API
+DELETE_CONCURRENCY = 12  # Run below rate limits (about half of typical limits)
+RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
+INPUT_CSV_NAME = "input.csv"
+TEST_LIMIT = None  # Safety limit for testing - set to None for unlimited
+
+
+class SafetyCultureAssetsClient:
+    def __init__(self, token: str) -> None:
+        self.token = token
+        self.session: Optional[aiohttp.ClientSession] = None
+
+    async def __aenter__(self) -> "SafetyCultureAssetsClient":
+        connector = aiohttp.TCPConnector(
+            limit=DELETE_CONCURRENCY * 2,
+            limit_per_host=DELETE_CONCURRENCY,
+            ttl_dns_cache=300,
+            use_dns_cache=True,
+        )
+        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.token}",
+        }
+        self.session = aiohttp.ClientSession(
+            connector=connector, timeout=timeout, headers=headers
+        )
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if self.session:
+            await self.session.close()
+
+    async def fetch_assets_page(
+        self, page_token: Optional[str] = None, state: Optional[str] = None
+    ) -> Dict:
+        if not self.session:
+            raise RuntimeError("Client session is not initialized")
+
+        payload: Dict[str, object] = {"page_size": PAGE_SIZE}
+        if page_token:
+            payload["page_token"] = page_token
+        if state:
+            payload["asset_filters"] = [{"state": state}]
+
+        async with self.session.post(LIST_ASSETS_URL, json=payload) as response:
+            text = await response.text()
+            try:
+                response.raise_for_status()
+            except aiohttp.ClientResponseError as err:
+                raise RuntimeError(
+                    f"List assets failed (status {response.status}): {text}"
+                ) from err
+            data = await response.json()
+            return data
+
+    async def stream_assets_cursor(self) -> Iterable[Tuple[int, List[Dict]]]:
         """
-        Initialize the SafetyCulture Asset Archiver.
-
-        Args:
-            api_token: SafetyCulture API token
-            base_url: Base URL for SafetyCulture API
+        Generator yielding pages of assets using cursor-based pagination.
+        Note: Cannot parallelize like actions since each page depends on
+        the previous page's next_page_token.
+        Fetches both ACTIVE and ARCHIVED assets.
         """
-        self.api_token = api_token
-        self.base_url = base_url.rstrip("/")
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "Authorization": f"Bearer {api_token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            }
+        page_number = 0
+
+        # Fetch ACTIVE assets first
+        page_token: Optional[str] = None
+        while True:
+            page_data = await self.fetch_assets_page(
+                page_token=page_token, state="ASSET_STATE_ACTIVE"
+            )
+            assets = page_data.get("assets", []) or []
+            if assets:
+                page_number += 1
+                yield page_number, assets
+
+            page_token = page_data.get("next_page_token")
+            if not page_token:
+                break
+
+        # Then fetch ARCHIVED assets
+        page_token = None
+        while True:
+            page_data = await self.fetch_assets_page(
+                page_token=page_token, state="ASSET_STATE_ARCHIVED"
+            )
+            assets = page_data.get("assets", []) or []
+            if assets:
+                page_number += 1
+                yield page_number, assets
+
+            page_token = page_data.get("next_page_token")
+            if not page_token:
+                break
+
+    async def archive_asset(
+        self,
+        asset_id: str,
+        semaphore: asyncio.Semaphore,
+    ) -> Dict[str, Optional[str]]:
+        if not self.session:
+            raise RuntimeError("Client session is not initialized")
+
+        url = f"{ARCHIVE_ASSET_URL}/{asset_id}/archive"
+
+        async with semaphore:
+            for attempt in range(1, 4):
+                try:
+                    async with self.session.patch(url, json={}) as response:
+                        text = await response.text()
+                        if response.status in (200, 204):
+                            return {
+                                "asset_id": asset_id,
+                                "operation": "archive",
+                                "status": "success",
+                                "status_code": str(response.status),
+                                "message": "",
+                            }
+
+                        if response.status in RETRY_STATUS_CODES and attempt < 3:
+                            await asyncio.sleep(2**attempt)
+                            continue
+
+                        return {
+                            "asset_id": asset_id,
+                            "operation": "archive",
+                            "status": "error",
+                            "status_code": str(response.status),
+                            "message": text or response.reason,
+                        }
+                except aiohttp.ClientError as error:
+                    if attempt < 3:
+                        await asyncio.sleep(2**attempt)
+                        continue
+                    return {
+                        "asset_id": asset_id,
+                        "operation": "archive",
+                        "status": "error",
+                        "status_code": None,
+                        "message": str(error),
+                    }
+
+    async def delete_asset(
+        self,
+        asset_id: str,
+        semaphore: asyncio.Semaphore,
+    ) -> Dict[str, Optional[str]]:
+        if not self.session:
+            raise RuntimeError("Client session is not initialized")
+
+        url = f"{DELETE_ASSET_URL}/{asset_id}"
+
+        async with semaphore:
+            for attempt in range(1, 4):
+                try:
+                    async with self.session.delete(url) as response:
+                        text = await response.text()
+                        if response.status in (200, 204):
+                            return {
+                                "asset_id": asset_id,
+                                "operation": "delete",
+                                "status": "success",
+                                "status_code": str(response.status),
+                                "message": "",
+                            }
+
+                        if response.status in RETRY_STATUS_CODES and attempt < 3:
+                            await asyncio.sleep(2**attempt)
+                            continue
+
+                        return {
+                            "asset_id": asset_id,
+                            "operation": "delete",
+                            "status": "error",
+                            "status_code": str(response.status),
+                            "message": text or response.reason,
+                        }
+                except aiohttp.ClientError as error:
+                    if attempt < 3:
+                        await asyncio.sleep(2**attempt)
+                        continue
+                    return {
+                        "asset_id": asset_id,
+                        "operation": "delete",
+                        "status": "error",
+                        "status_code": None,
+                        "message": str(error),
+                    }
+
+
+def load_assets_from_csv(csv_path: Path) -> List[Dict]:
+    if not csv_path.exists():
+        print(f"No CSV found at {csv_path}. Falling back to API fetch.")
+        return []
+
+    with csv_path.open(newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        if not reader.fieldnames:
+            print(f"CSV at {csv_path} has no headers. Falling back to API fetch.")
+            return []
+
+        # Look for common asset ID column names
+        asset_id_column = None
+        for col in reader.fieldnames:
+            if col.lower() in ["asset_id", "id", "uuid"]:
+                asset_id_column = col
+                break
+
+        if not asset_id_column:
+            print(
+                f"CSV at {csv_path} must include one of: asset_id, id, uuid. "
+                "No rows will be processed from this file."
+            )
+            return []
+
+        # Check for optional state column
+        state_column = None
+        for col in reader.fieldnames:
+            if col.lower() == "state":
+                state_column = col
+                break
+
+        rows: List[Dict] = []
+        for row in reader:
+            asset_id = (row.get(asset_id_column) or "").strip()
+            if asset_id:
+                asset_info = {"id": asset_id, "state": "ASSET_STATE_UNSPECIFIED"}
+                if state_column:
+                    state = (row.get(state_column) or "").strip()
+                    if state:
+                        asset_info["state"] = state
+                rows.append(asset_info)
+
+        if not rows:
+            print(f"CSV at {csv_path} is empty. Falling back to API fetch.")
+        else:
+            print(f"Loaded {len(rows)} assets from {csv_path}.")
+
+        return rows
+
+
+async def collect_assets_from_api(
+    client: SafetyCultureAssetsClient,
+) -> Tuple[List[Dict], int]:
+    assets_list: List[Dict] = []
+    total_assets = 0
+
+    async for page_number, assets in client.stream_assets_cursor():
+        total_assets += len(assets)
+        for asset in assets:
+            if asset.get("id"):
+                assets_list.append(
+                    {
+                        "id": asset.get("id"),
+                        "state": asset.get("state", "ASSET_STATE_UNSPECIFIED"),
+                    }
+                )
+        print(
+            f"Page {page_number}: {len(assets)} assets, "
+            f"{len(assets_list)} total collected so far."
         )
 
-        # Statistics
-        self.stats = {"total": 0, "successful": 0, "failed": 0, "skipped": 0}
+        # Safety limit for testing
+        if TEST_LIMIT and len(assets_list) >= TEST_LIMIT:
+            print(f"Reached test limit of {TEST_LIMIT} assets. Stopping collection.")
+            break
 
-    def archive_asset(self, asset_id: str) -> Dict[str, Any]:
-        """
-        Archive a single asset in SafetyCulture.
+    return assets_list, total_assets
 
-        Args:
-            asset_id: UUID of the asset to archive
 
-        Returns:
-            Dictionary containing the result of the archive attempt
-        """
-        url = f"{self.base_url}/assets/v1/assets/{asset_id}/archive"
+def deduplicate_assets(assets: List[Dict]) -> List[Dict]:
+    seen = set()
+    unique_assets = []
+    for asset in assets:
+        asset_id = asset.get("id")
+        if asset_id in seen:
+            continue
+        seen.add(asset_id)
+        unique_assets.append(asset)
+    return unique_assets
 
-        # Archive request typically requires an empty body or specific parameters
-        archive_data = {}
 
-        try:
-            logger.info(f"Attempting to archive asset: {asset_id}")
-            response = self.session.patch(url, json=archive_data)
+async def archive_and_delete_assets(
+    client: SafetyCultureAssetsClient,
+    assets: List[Dict],
+    log_path: Path,
+) -> Dict[str, int]:
+    semaphore = asyncio.Semaphore(DELETE_CONCURRENCY)
+    archive_successes = 0
+    archive_skipped = 0
+    delete_successes = 0
+    total_failures = 0
 
-            result = {
-                "asset_id": asset_id,
-                "timestamp": datetime.now().isoformat(),
-                "status_code": response.status_code,
-                "success": False,
-                "error_message": None,
-                "response_body": None,
-            }
+    fieldnames = ["asset_id", "operation", "status", "status_code", "message"]
+    with log_path.open("w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
 
-            if response.status_code == 200:
-                result["success"] = True
-                result["response_body"] = (
-                    response.text if response.text else "Asset archived successfully"
+        for start in range(0, len(assets), 200):
+            chunk = assets[start : start + 200]
+
+            # Step 1: Archive non-archived assets
+            archive_tasks = []
+            for asset in chunk:
+                if asset.get("state") != "ASSET_STATE_ARCHIVED":
+                    archive_tasks.append(client.archive_asset(asset["id"], semaphore))
+                else:
+                    archive_skipped += 1
+
+            if archive_tasks:
+                print(
+                    f"Archiving {len(archive_tasks)} active assets "
+                    f"({archive_skipped} already archived)..."
                 )
-                self.stats["successful"] += 1
-                logger.info(f"Successfully archived asset: {asset_id}")
-            else:
-                result["error_message"] = (
-                    f"HTTP {response.status_code}: {response.text}"
-                )
-                self.stats["failed"] += 1
-                logger.error(
-                    f"Failed to archive asset {asset_id}: {result['error_message']}"
-                )
+                archive_results = await asyncio.gather(*archive_tasks)
 
-        except requests.exceptions.RequestException as e:
-            result = {
-                "asset_id": asset_id,
-                "timestamp": datetime.now().isoformat(),
-                "status_code": None,
-                "success": False,
-                "error_message": str(e),
-                "response_body": None,
-            }
-            self.stats["failed"] += 1
-            logger.error(f"Request exception for asset {asset_id}: {e}")
+                for result in archive_results:
+                    writer.writerow(result)
+                    if result["status"] == "success":
+                        archive_successes += 1
+                    else:
+                        total_failures += 1
+                csvfile.flush()
 
-        except Exception as e:
-            result = {
-                "asset_id": asset_id,
-                "timestamp": datetime.now().isoformat(),
-                "status_code": None,
-                "success": False,
-                "error_message": f"Unexpected error: {str(e)}",
-                "response_body": None,
-            }
-            self.stats["failed"] += 1
-            logger.error(f"Unexpected error for asset {asset_id}: {e}")
+            # Step 2: Delete all assets in chunk (now all should be archived)
+            delete_tasks = [
+                client.delete_asset(asset["id"], semaphore) for asset in chunk
+            ]
+            delete_results = await asyncio.gather(*delete_tasks)
 
-        return result
-
-    def read_asset_ids_from_csv(self, input_file: str) -> List[str]:
-        """
-        Read asset IDs from input CSV file with header row.
-
-        Expected CSV format:
-        asset_id
-        abc123-def456-ghi789
-        def456-ghi789-jkl012
-
-        Args:
-            input_file: Path to the input CSV file
-
-        Returns:
-            List of asset IDs
-        """
-        try:
-            # Read CSV with pandas, expecting header row
-            df = pd.read_csv(input_file)
-
-            # Check for expected column name (case insensitive)
-            asset_id_column = None
-            for col in df.columns:
-                if col.lower() in ["asset_id", "id", "uuid"]:
-                    asset_id_column = col
-                    break
-
-            if asset_id_column is None:
-                logger.error(
-                    f"No valid asset ID column found. Expected 'asset_id', 'id', or 'uuid'. Found columns: {list(df.columns)}"
-                )
-                sys.exit(1)
-
-            # Extract asset IDs and remove any empty/NaN values
-            asset_ids = df[asset_id_column].dropna().astype(str).str.strip().tolist()
-
-            # Remove any empty strings
-            asset_ids = [aid for aid in asset_ids if aid]
-
-            if not asset_ids:
-                logger.error("No asset IDs found in the input file")
-                sys.exit(1)
-
-            logger.info(f"Read {len(asset_ids)} asset IDs from {input_file}")
-            return asset_ids
-
-        except FileNotFoundError:
-            logger.error(f"Input file not found: {input_file}")
-            sys.exit(1)
-        except pd.errors.EmptyDataError:
-            logger.error(f"Input file is empty: {input_file}")
-            sys.exit(1)
-        except Exception as e:
-            logger.error(f"Error reading input file: {e}")
-            sys.exit(1)
-
-    def write_result_to_csv(
-        self, output_file: str, result: Dict[str, Any], write_header: bool = False
-    ):
-        """
-        Write a single result to the output CSV file.
-
-        Args:
-            output_file: Path to the output CSV file
-            result: Result dictionary to write
-            write_header: Whether to write the CSV header
-        """
-        fieldnames = [
-            "asset_id",
-            "timestamp",
-            "success",
-            "status_code",
-            "error_message",
-            "response_body",
-        ]
-
-        try:
-            file_exists = Path(output_file).exists()
-
-            with open(output_file, "a", newline="", encoding="utf-8") as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-                # Write header if file is new or write_header is True
-                if not file_exists or write_header:
-                    writer.writeheader()
-
+            for result in delete_results:
                 writer.writerow(result)
-                csvfile.flush()  # Ensure data is written immediately
+                if result["status"] == "success":
+                    delete_successes += 1
+                else:
+                    total_failures += 1
 
-        except Exception as e:
-            logger.error(f"Error writing to output file: {e}")
+            processed = start + len(chunk)
+            print(f"Processed {processed}/{len(assets)} assets...")
+            csvfile.flush()
 
-    def archive_assets_from_csv(
-        self, input_file: str, output_file: str, delay: float = 0.1
-    ):
-        """
-        Archive assets listed in CSV file and log results.
+    return {
+        "archive_successes": archive_successes,
+        "archive_skipped": archive_skipped,
+        "delete_successes": delete_successes,
+        "failures": total_failures,
+    }
 
-        Args:
-            input_file: Path to input CSV file containing asset IDs
-            output_file: Path to output CSV file for logging results
-            delay: Delay in seconds between API calls (to respect rate limits)
-        """
-        # Read asset IDs
-        asset_ids = self.read_asset_ids_from_csv(input_file)
 
-        if not asset_ids:
-            logger.warning("No asset IDs found in input file")
-            return
+def build_log_path(base_dir: Path) -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return base_dir / f"delete_assets_log_{timestamp}.csv"
 
-        self.stats["total"] = len(asset_ids)
 
-        # Initialize output file with header
-        self.write_result_to_csv(output_file, {}, write_header=True)
+async def main() -> int:
+    if not TOKEN:
+        print("Error: set TOKEN at the top of main.py before running.")
+        return 1
 
-        logger.info(f"Starting archiving of {len(asset_ids)} assets...")
-        logger.info(f"Results will be logged to: {output_file}")
+    script_dir = Path(__file__).parent
+    csv_path = script_dir / INPUT_CSV_NAME
 
-        start_time = time.time()
+    csv_assets = load_assets_from_csv(csv_path)
 
-        for i, asset_id in enumerate(asset_ids, 1):
-            logger.info(f"Processing asset {i}/{len(asset_ids)}: {asset_id}")
+    async with SafetyCultureAssetsClient(TOKEN) as client:
+        if csv_assets:
+            assets = csv_assets
+            total_assets = len(assets)
+            source = "CSV"
+        else:
+            print("Fetching assets from API...")
+            assets, total_assets = await collect_assets_from_api(client)
+            source = "API"
 
-            # Archive the asset
-            result = self.archive_asset(asset_id)
+        if not assets:
+            print("No assets found to delete. Exiting.")
+            return 0
 
-            # Write result to CSV immediately
-            self.write_result_to_csv(output_file, result)
+        unique_assets = deduplicate_assets(assets)
+        if len(unique_assets) < len(assets):
+            print(f"Deduplicated assets: {len(assets)} -> {len(unique_assets)}.")
+        assets = unique_assets
 
-            # Add delay between requests to respect rate limits
-            if delay > 0 and i < len(asset_ids):
-                time.sleep(delay)
-
-        end_time = time.time()
-        duration = end_time - start_time
-
-        # Log final statistics
-        logger.info("=" * 50)
-        logger.info("ARCHIVING SUMMARY")
-        logger.info("=" * 50)
-        logger.info(f"Total assets processed: {self.stats['total']}")
-        logger.info(f"Successfully archived: {self.stats['successful']}")
-        logger.info(f"Failed archives: {self.stats['failed']}")
-        logger.info(f"Skipped: {self.stats['skipped']}")
-        logger.info(
-            f"Success rate: {(self.stats['successful'] / self.stats['total']) * 100:.1f}%"
+        # Count assets by state
+        active_count = sum(
+            1 for a in assets if a.get("state") != "ASSET_STATE_ARCHIVED"
         )
-        logger.info(f"Total time: {duration:.2f} seconds")
-        logger.info(
-            f"Average time per asset: {duration / self.stats['total']:.2f} seconds"
+        archived_count = sum(
+            1 for a in assets if a.get("state") == "ASSET_STATE_ARCHIVED"
         )
-        logger.info(f"Results logged to: {output_file}")
 
-
-def main():
-    """Main function to handle command line arguments and execute the archiving process."""
-    parser = argparse.ArgumentParser(
-        description="Archive SafetyCulture assets from CSV list",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python delete_assets.py --api-token YOUR_TOKEN --input input.csv --output output.csv
-  python delete_assets.py --api-token YOUR_TOKEN --input input.csv --output output.csv --delay 0.5
-
-Environment Variables:
-  SC_API_TOKEN - SafetyCulture API token (alternative to --api-token)
-        """,
-    )
-
-    parser.add_argument(
-        "--api-token",
-        type=str,
-        help="SafetyCulture API token (or set SC_API_TOKEN environment variable)",
-    )
-
-    parser.add_argument(
-        "--input",
-        type=str,
-        default="input.csv",
-        help="Input CSV file containing asset IDs (default: input.csv)",
-    )
-
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="archive_results.csv",
-        help="Output CSV file for logging results (default: archive_results.csv)",
-    )
-
-    parser.add_argument(
-        "--delay",
-        type=float,
-        default=0.1,
-        help="Delay between API calls in seconds (default: 0.1)",
-    )
-
-    parser.add_argument(
-        "--base-url",
-        type=str,
-        default="https://api.safetyculture.io",
-        help="SafetyCulture API base URL (default: https://api.safetyculture.io)",
-    )
-
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Perform a dry run without actually archiving assets",
-    )
-
-    args = parser.parse_args()
-
-    # Get API token from args or environment
-    api_token = TOKEN
-
-    if not api_token:
-        logger.error(
-            "API token is required. Use --api-token or set SC_API_TOKEN environment variable."
+        print(
+            f"Processing {len(assets)} assets "
+            f"(source: {source}, total scanned: {total_assets})"
         )
-        sys.exit(1)
+        print(f"  - {active_count} active assets (will archive first)")
+        print(f"  - {archived_count} already archived assets")
+        print(f"Concurrency: {DELETE_CONCURRENCY}")
 
-    # Validate input file exists
-    if not Path(args.input).exists():
-        logger.error(f"Input file does not exist: {args.input}")
-        sys.exit(1)
+        log_path = build_log_path(script_dir)
+        summary = await archive_and_delete_assets(client, assets, log_path)
 
-    if args.dry_run:
-        logger.info("DRY RUN MODE - No assets will actually be archived")
-        # In dry run mode, just read and validate the input file
-        archiver = SafetyCultureAssetArchiver(api_token, args.base_url)
-        asset_ids = archiver.read_asset_ids_from_csv(args.input)
-        logger.info(f"Dry run complete. Would archive {len(asset_ids)} assets.")
-        return
+        # Print summary with colors
+        print(f"\n{Colors.BOLD}Operation complete.{Colors.RESET}")
+        print(f"\n{Colors.BOLD}Archives:{Colors.RESET}")
+        if summary["archive_successes"] > 0:
+            print(
+                f"  - {Colors.GREEN}Successfully archived: "
+                f"{summary['archive_successes']}{Colors.RESET}"
+            )
+        if summary["archive_skipped"] > 0:
+            print(
+                f"  - {Colors.YELLOW}Already archived (skipped): "
+                f"{summary['archive_skipped']}{Colors.RESET}"
+            )
 
-    # Confirm before proceeding
-    print("About to archive assets in SafetyCulture using:")
-    print(f"  Input file: {args.input}")
-    print(f"  Output file: {args.output}")
-    print(f"  API base URL: {args.base_url}")
-    print(f"  Delay between calls: {args.delay}s")
+        print(f"\n{Colors.BOLD}Deletions:{Colors.RESET}")
+        if summary["delete_successes"] > 0:
+            print(
+                f"  - {Colors.GREEN}Successfully deleted: "
+                f"{summary['delete_successes']}{Colors.RESET}"
+            )
 
-    confirmation = (
-        input("\nAre you sure you want to proceed? (yes/no): ").lower().strip()
-    )
-    if confirmation not in ["yes", "y"]:
-        logger.info("Operation cancelled by user")
-        sys.exit(0)
+        if summary["failures"] > 0:
+            print(
+                f"\n{Colors.RED}Total failures: " f"{summary['failures']}{Colors.RESET}"
+            )
+        else:
+            print(f"\n{Colors.GREEN}Total failures: 0{Colors.RESET}")
 
-    # Initialize archiver and start the process
-    archiver = SafetyCultureAssetArchiver(api_token, args.base_url)
+        print(f"\n{Colors.BLUE}Log written to: {log_path}{Colors.RESET}")
 
-    try:
-        archiver.archive_assets_from_csv(args.input, args.output, args.delay)
-    except KeyboardInterrupt:
-        logger.info("Process interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        sys.exit(1)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
