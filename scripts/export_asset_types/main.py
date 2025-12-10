@@ -2,7 +2,7 @@ import csv
 
 import requests
 
-TOKEN = ''
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def fetch_asset_types():

@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import requests
 
-TOKEN = ""
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def read_csv():
@@ -37,7 +37,7 @@ def map_users_for_deactivation(csv, identifier_type):
                 print(f"Warning: Skipping row with missing user_id: {row}")
                 continue
             user_obj = {"user_id": row["user_id"], "status": "deactivated"}
-        else:  # email
+        else:
             if not row.get("email"):
                 print(f"Warning: Skipping row with missing email: {row}")
                 continue

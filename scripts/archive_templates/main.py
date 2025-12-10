@@ -1,7 +1,7 @@
 import pandas as pd
 import requests
 
-TOKEN = ''  # Add your API token here
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 def archive_template(template_id):

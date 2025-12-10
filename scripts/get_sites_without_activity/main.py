@@ -7,12 +7,11 @@ from typing import Dict, List, Set
 
 import aiohttp
 
-TOKEN = ""
+TOKEN = ""  # Set your SafetyCulture API token here
 BASE_URL = "https://api.safetyculture.io"
 
 
 class SafetyCultureAPI:
-    """SafetyCulture API client."""
 
     def __init__(self, max_concurrent_requests=25):
         self.headers = {
@@ -24,7 +23,6 @@ class SafetyCultureAPI:
         self.semaphore = None
 
     async def __aenter__(self):
-        # Create session with connection pooling
         connector = aiohttp.TCPConnector(
             limit=100,
             limit_per_host=30,
@@ -43,7 +41,6 @@ class SafetyCultureAPI:
             await self.session.close()
 
     async def fetch_page(self, url: str) -> Dict:
-        """Fetch a single page from the API with rate limiting"""
         async with self.semaphore:
             try:
                 async with self.session.get(url) as response:
@@ -54,7 +51,6 @@ class SafetyCultureAPI:
                 raise
 
     async def fetch_all_inspections(self) -> List[Dict]:
-        """Fetch all inspections - sequential pagination with progress tracking"""
         initial_url = f"{BASE_URL}/feed/inspections?archived=false&completed=both"
         print("🚀 Starting inspection fetch...")
 
@@ -70,11 +66,9 @@ class SafetyCultureAPI:
                 all_data.extend(data)
                 page_count += 1
 
-                # Get metadata for remaining records
                 metadata = response.get("metadata", {})
                 remaining_records = metadata.get("remaining_records", 0)
 
-                # Calculate time estimates
                 elapsed = time.time() - start_time
                 rate = page_count / elapsed if elapsed > 0 else 0
 
@@ -87,12 +81,10 @@ class SafetyCultureAPI:
                 else:
                     eta_str = "calculating..."
 
-                # Real-time logging for every page
                 print(
                     f"  📄 Page {page_count}: {len(data)} records | Total: {len(all_data):,} | Remaining: {remaining_records:,} | Rate: {rate:.2f} pages/sec | ETA: {eta_str}"
                 )
 
-                # Get next page URL
                 next_url = metadata.get("next_page")
                 if next_url:
                     if not next_url.startswith("http"):
@@ -113,7 +105,6 @@ class SafetyCultureAPI:
         return all_data
 
     async def fetch_all_sites(self) -> List[Dict]:
-        """Fetch all folders (sites) using directory API"""
         initial_url = f"{BASE_URL}/directory/v1/folders?page_size=1500"
         print("🚀 Starting folder fetch...")
 
@@ -129,7 +120,6 @@ class SafetyCultureAPI:
                 all_data.extend(folders)
                 page_count += 1
 
-                # Get next page URL
                 next_page_token = response.get("next_page_token")
                 if next_page_token:
                     base_url = url.split("?")[0]
@@ -149,7 +139,6 @@ class SafetyCultureAPI:
 
 
 def get_sites_with_activity(inspections: List[Dict]) -> Set[str]:
-    """Extract unique site IDs that have inspection activity"""
     sites_with_activity = set()
 
     for inspection in inspections:
@@ -164,7 +153,6 @@ def get_sites_with_activity(inspections: List[Dict]) -> Set[str]:
 def find_sites_without_activity(
     sites: List[Dict], sites_with_activity: Set[str]
 ) -> List[Dict]:
-    """Find sites that don't have any inspection activity"""
     sites_without_activity = []
 
     for site in sites:
@@ -179,7 +167,6 @@ def find_sites_without_activity(
 
 
 def get_next_output_dir() -> str:
-    """Find the next available output directory (output, output_1, output_2, etc.)"""
     base_dir = "output"
     if not os.path.exists(base_dir):
         return base_dir
@@ -193,12 +180,10 @@ def get_next_output_dir() -> str:
 
 
 def write_csv(data: List[Dict], filename: str):
-    """Write data to CSV file"""
     if not data:
         print(f"⚠️  No data to write to {filename}")
         return
 
-    # Ensure directory exists
     os.makedirs(os.path.dirname(filename), exist_ok=True)
 
     with open(filename, "w", newline="", encoding="utf-8") as csvfile:
@@ -212,7 +197,6 @@ def write_csv(data: List[Dict], filename: str):
 
 
 async def main():
-    """Main execution function"""
     if not TOKEN:
         print("❌ Error: TOKEN not set in script")
         print("Please set your token in the TOKEN variable at the top of main.py")
@@ -226,14 +210,12 @@ async def main():
     start_time = datetime.now()
 
     async with SafetyCultureAPI(max_concurrent_requests=25) as api:
-        # Fetch both inspections and sites concurrently
         print("🔄 Fetching inspections and sites concurrently...")
 
         fetch_start = time.time()
         inspections_task = asyncio.create_task(api.fetch_all_inspections())
         sites_task = asyncio.create_task(api.fetch_all_sites())
 
-        # Wait for both to complete
         inspections, sites = await asyncio.gather(inspections_task, sites_task)
         fetch_time = time.time() - fetch_start
 
@@ -242,17 +224,13 @@ async def main():
     print("\n📈 Processing data...")
     process_start = time.time()
 
-    # Get sites that have inspection activity
     sites_with_activity = get_sites_with_activity(inspections)
 
-    # Find sites without activity
     sites_without_activity = find_sites_without_activity(sites, sites_with_activity)
     process_time = time.time() - process_start
 
-    # Get next available output directory
     output_dir = get_next_output_dir()
 
-    # Write results to CSV files
     print(f"\n💾 Saving results to {output_dir}/...")
     save_start = time.time()
     write_csv(sites_without_activity, f"{output_dir}/sites_without_activity.csv")
@@ -260,7 +238,6 @@ async def main():
     write_csv(sites, f"{output_dir}/all_sites.csv")
     save_time = time.time() - save_start
 
-    # Summary
     end_time = datetime.now()
     duration = end_time - start_time
 

@@ -6,7 +6,7 @@ import aiohttp
 import pandas as pd
 from tqdm.asyncio import tqdm
 
-TOKEN = ""
+TOKEN = ""  # Set your SafetyCulture API token here
 
 
 async def list_user_fields(session: aiohttp.ClientSession) -> List[Dict[str, Any]]:
