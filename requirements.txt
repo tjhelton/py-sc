@@ -7,9 +7,9 @@ pandas>=2.0.0
 requests>=2.31.0
 
 # Async HTTP library
-# Required by: fetch_issues, get_sites_without_activity, fetch_user_custom_fields, delete_action_schedules
+# Required by: fetch_issues, get_sites_without_activity, fetch_user_custom_fields, delete_action_schedules, delete_assets, nuke_account
 aiohttp>=3.9.0
 
 # Progress bar library
-# Required by: fetch_user_custom_fields
+# Required by: fetch_user_custom_fields, nuke_account
 tqdm>=4.66.0
