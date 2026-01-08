@@ -1,9 +1,11 @@
+import ast
 import asyncio
 import csv
+import json
 import os
 import time
 from datetime import datetime
-from typing import Dict
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 
@@ -168,6 +170,151 @@ def get_next_output_file() -> str:
     return output_file
 
 
+def parse_detail_fields(raw_fields: Any) -> Dict[str, str]:
+    if raw_fields in (None, "", []):
+        return {}
+
+    parsed_items: List[Dict[str, Any]] = []
+
+    if isinstance(raw_fields, list):
+        parsed_items = raw_fields
+    elif isinstance(raw_fields, dict):
+        parsed_items = [raw_fields]
+    else:
+        text = str(raw_fields).strip()
+        if not text:
+            return {}
+
+        attempts: List[str] = [text, f"[{text}]"]
+
+        if "|" in text:
+            pipe_to_comma = text.replace("|", ",")
+            attempts.extend([pipe_to_comma, f"[{pipe_to_comma}]"])
+
+        for candidate in attempts:
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict):
+                    parsed_items = [parsed]
+                elif isinstance(parsed, list):
+                    parsed_items = parsed
+                if parsed_items:
+                    break
+            except json.JSONDecodeError:
+                continue
+
+        if not parsed_items:
+            try:
+                parsed_literal = ast.literal_eval(text)
+                if isinstance(parsed_literal, dict):
+                    parsed_items = [parsed_literal]
+                elif isinstance(parsed_literal, list):
+                    parsed_items = parsed_literal
+            except (ValueError, SyntaxError):
+                parsed_items = []
+
+    detail_values: Dict[str, str] = {}
+
+    for item in parsed_items:
+        if not isinstance(item, dict):
+            continue
+
+        name = str(
+            item.get("name") or item.get("label") or item.get("field_id") or ""
+        ).strip()
+
+        if not name:
+            continue
+
+        value = item.get("value", "")
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value)
+        elif value is None:
+            value = ""
+        else:
+            value = str(value)
+
+        detail_values[name] = value
+
+    return detail_values
+
+
+def get_flattened_output_file(raw_output_file: str) -> str:
+    base, ext = os.path.splitext(raw_output_file)
+    output_file = f"{base}_flattened{ext}"
+
+    counter = 1
+    while os.path.exists(output_file):
+        output_file = f"{base}_flattened_{counter}{ext}"
+        counter += 1
+
+    return output_file
+
+
+def flatten_asset_fields(
+    raw_csv_path: str, output_path: Optional[str] = None
+) -> Tuple[str, List[str], int]:
+    print("\n🧮 Expanding asset detail fields into columns...")
+
+    if not os.path.exists(raw_csv_path):
+        raise FileNotFoundError(f"Raw asset file not found: {raw_csv_path}")
+
+    detail_columns: List[str] = []
+    name_to_column: Dict[str, str] = {}
+    base_columns: List[str] = []
+    total_assets = 0
+
+    with open(raw_csv_path, newline="", encoding="utf-8") as raw_file:
+        reader = csv.DictReader(raw_file)
+        if not reader.fieldnames:
+            print("⚠️  No data found to flatten.")
+            return raw_csv_path, [], 0
+
+        base_columns = [col for col in reader.fieldnames if col != "fields"]
+
+        for row in reader:
+            total_assets += 1
+            parsed_details = parse_detail_fields(row.get("fields", ""))
+
+            for original_name in parsed_details.keys():
+                if not original_name:
+                    continue
+
+                if original_name in name_to_column:
+                    continue
+
+                column_name = original_name
+                suffix = 1
+
+                while column_name in base_columns or column_name in detail_columns:
+                    column_name = f"{original_name}_{suffix}"
+                    suffix += 1
+
+                name_to_column[original_name] = column_name
+                detail_columns.append(column_name)
+
+    output_file = output_path or get_flattened_output_file(raw_csv_path)
+
+    with open(raw_csv_path, newline="", encoding="utf-8") as raw_file, open(
+        output_file, "w", newline="", encoding="utf-8"
+    ) as flat_file:
+        reader = csv.DictReader(raw_file)
+        fieldnames = base_columns + detail_columns
+        writer = csv.DictWriter(flat_file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for row in reader:
+            details = parse_detail_fields(row.get("fields", ""))
+            output_row = {col: row.get(col, "") for col in base_columns}
+
+            for original_name, column_name in name_to_column.items():
+                output_row[column_name] = details.get(original_name, "")
+
+            writer.writerow(output_row)
+
+    return output_file, detail_columns, total_assets
+
+
 async def main():
     if not TOKEN:
         print("❌ Error: TOKEN not set in script")
@@ -194,6 +341,8 @@ async def main():
     async with SafetyCultureAssetFetcher() as fetcher:
         await fetcher.fetch_all_assets(output_file)
 
+    flattened_file, detail_fields, asset_count = flatten_asset_fields(output_file)
+
     end_time = datetime.now()
     duration = end_time - start_time
 
@@ -201,6 +350,13 @@ async def main():
     print(f"📅 Start time: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"📅 End time: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"⏱️  Duration: {duration}")
+    print(f"🧭 Assets processed: {asset_count}")
+    print(f"🧩 Detail fields expanded: {len(detail_fields)}")
+    if detail_fields:
+        print("📑 Detail columns added:")
+        for name in detail_fields:
+            print(f"   - {name}")
+    print(f"💾 Flattened output saved to: {flattened_file}")
 
     return 0
 
