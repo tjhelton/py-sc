@@ -15,6 +15,7 @@ extend-ignore =
     D205,
     D400,
     D401,
+    I101,
     I201
 exclude =
     .git,

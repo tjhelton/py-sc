@@ -132,6 +132,7 @@ extend-ignore = [
     "D205",  # 1 blank line required between summary line and description
     "D400",  # First line should end with a period
     "D401",  # First line should be in imperative mood
+    "I101",  # Imported names in wrong order (conflicts with isort)
     "I201",  # Missing newline between import groups (handled by isort)
 ]
 exclude = [
