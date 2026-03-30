@@ -18,7 +18,7 @@ make install
 make pre-commit
 
 # Run any script
-cd scripts/archive_templates/
+cd scripts/templates/archive_templates/
 # Set your API token in main.py
 python main.py
 ```
@@ -34,6 +34,7 @@ python main.py
 ### Assets
 - **[export_assets/](scripts/assets/export_assets/)** - High-performance asset export to CSV
 - **[export_asset_types/](scripts/assets/export_asset_types/)** - Export asset type definitions
+- **[update_assets/](scripts/assets/update_assets/)** - Bulk update assets from CSV
 - **[delete_assets/](scripts/assets/delete_assets/)** - Archive-then-delete assets with colored output
 
 ### Courses
@@ -44,6 +45,12 @@ python main.py
 - **[export_group_assignees/](scripts/groups/export_group_assignees/)** - Export group assignee information
 
 ### Inspections
+- **[archive_inspections/](scripts/inspections/archive_inspections/)** - Bulk archive inspections with rate limiting
+- **[complete_inspections/](scripts/inspections/complete_inspections/)** - Bulk complete inspections
+- **[delete_inspections/](scripts/inspections/delete_inspections/)** - Permanently delete inspections in bulk
+- **[export_inspection_location_changes/](scripts/inspections/export_inspection_location_changes/)** - Export address field changes from revision history
+- **[export_inspection_pdfs/](scripts/inspections/export_inspection_pdfs/)** - Bulk export inspection PDFs
+- **[unarchive_inspections/](scripts/inspections/unarchive_inspections/)** - Bulk unarchive inspections
 - **[update_inspection_site/](scripts/inspections/update_inspection_site/)** - Configure inspection-site relationships
 
 ### Issues
@@ -113,6 +120,7 @@ This installs:
 - **pandas** - CSV data processing and manipulation
 - **requests** - HTTP requests to SafetyCulture API
 - **aiohttp** - Async HTTP requests (for concurrent processing scripts)
+- **tqdm** - Progress bars for long-running operations
 
 ## 📖 Usage Patterns
 
