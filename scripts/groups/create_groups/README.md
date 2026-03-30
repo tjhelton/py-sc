@@ -4,7 +4,7 @@ Creates SafetyCulture groups in bulk via API. Reads group names from CSV input a
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Prepare input**: Create `input.csv` with `name` column
 4. **Run script**: `python main.py`

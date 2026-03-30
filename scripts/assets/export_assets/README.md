@@ -26,7 +26,7 @@ A high-performance script that fetches ALL assets from SafetyCulture as fast as 
 
 1. **Install dependencies**:
    ```bash
-   pip install -r ../../requirements.txt
+   pip install -r ../../../requirements.txt
    ```
 
 2. **Set API token**:
@@ -183,6 +183,6 @@ connector = aiohttp.TCPConnector(
 
 ## Related Scripts
 
-- `export_asset_types/` - Export asset type definitions
-- `delete_assets/` - Archive assets in bulk
-- `get_sites_without_activity/` - Analyze site activity (uses similar async patterns)
+- `../export_asset_types/` - Export asset type definitions
+- `../delete_assets/` - Archive assets in bulk
+- `../../sites/export_sites_inactive/` - Analyze site activity (uses similar async patterns)

@@ -4,7 +4,7 @@ Updates user site access for SafetyCulture users in bulk via API. Uses user upse
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Prepare input**: Create `input.csv` with user emails and site IDs
 4. **Run script**: `python main.py`

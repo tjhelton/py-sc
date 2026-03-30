@@ -3,7 +3,7 @@
 Bulk deletes recurring action schedules. Accepts a CSV of `action_id` and `schedule_id` pairs or, if the CSV is absent/empty, it fetches all actions with schedules via `/tasks/v1/actions/list` and removes their schedules with `/tasks/v1/actions:DeleteActionSchedule`. Requests run asynchronously with a conservative concurrency limit.
 
 ## Quick start
-- Install deps: `pip install -r ../../requirements.txt`
+- Install deps: `pip install -r ../../../requirements.txt`
 - Set your API token in `main.py` (`TOKEN = ""`)
 - Option A: populate `input.csv` with `action_id,schedule_id`; Option B: leave it empty to auto-discover schedules
 - Run: `python main.py`

@@ -4,7 +4,7 @@ Identifies SafetyCulture sites with no inspection activity via API. Compares all
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Run script**: `python main.py`
 4. **Check output**: Find timestamped CSV files in `output/` directory

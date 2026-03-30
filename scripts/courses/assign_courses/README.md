@@ -4,7 +4,7 @@ Assigns SafetyCulture training courses to sites in bulk using the Training API.
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` with your SafetyCulture API token in `main.py`
 3. **Prepare input**: Create `input.csv` with course-site assignments (one per row)
 4. **Run script**: `python main.py`

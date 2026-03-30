@@ -4,7 +4,7 @@ Deletes SafetyCulture sites in bulk via API. Reads site IDs from CSV input and l
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Prepare input**: Create `input.csv` with `siteId` column
 4. **Run script**: `python main.py`
