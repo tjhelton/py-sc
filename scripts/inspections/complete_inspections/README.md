@@ -6,7 +6,7 @@ Completes SafetyCulture inspections in bulk using a private API endpoint. Proces
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Prepare input**: Create `input.csv` with inspection audit IDs
 4. **Run script**: `python main.py`
@@ -68,7 +68,7 @@ Generates `output.csv` (or `output_1.csv`, etc.) with real-time results:
 cd scripts/complete_inspections/
 
 # Install dependencies (if not already installed)
-pip install -r ../../requirements.txt
+pip install -r ../../../requirements.txt
 
 # Edit main.py to add your API token
 # Create input.csv with audit IDs

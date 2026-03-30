@@ -4,7 +4,7 @@ Exports all SafetyCulture users with their custom field values to CSV. Uses asyn
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Run script**: `python main.py`
 4. **View output**: Check generated `output.csv` (or `output_1.csv`, etc.)

@@ -4,10 +4,10 @@ Exports all SafetyCulture issue relationship data to CSV. Fetches relationships 
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Run script**: `python main.py`
-4. **Check output**: Find timestamped CSV file (e.g., `issue_relations_20241201_143022.csv`)
+4. **Check output**: Find `issue_relations.csv` in the script directory
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ No input file required - fetches all issue relationships from your SafetyCulture
 
 ## Output
 
-Generates timestamped CSV file with the following fields:
+Generates `issue_relations.csv` with the following fields:
 
 - `id` - Composite relationship ID (unique identifier for the relationship)
 - `from_id` - Source entity UUID (typically the issue ID)
@@ -29,9 +29,7 @@ Generates timestamped CSV file with the following fields:
 - `rel_type` - Relationship type (e.g., ISSUE-INSPECTION, ISSUE-ACTION, ISSUE-ASSET)
 - `rel_created_at` - Relationship creation timestamp (ISO 8601 format)
 
-**Output filename format**: `issue_relations_YYYYMMDD_HHMMSS.csv`
-
-**Example**: `issue_relations_20241201_143022.csv`
+**Output filename**: `issue_relations.csv`
 
 ## Features
 
@@ -40,7 +38,7 @@ Generates timestamped CSV file with the following fields:
 - **Retry Logic**: 3 attempts with exponential backoff for transient network errors
 - **Rate Limit Handling**: Automatically waits when API rate limits are hit
 - **Progress Tracking**: Real-time page counts, throughput rate, and estimated time remaining
-- **Timestamped Output**: Prevents overwriting previous exports
+- **Consistent Output**: Writes to `issue_relations.csv`
 - **Error Recovery**: Partial data saved on failure (all successfully fetched pages preserved)
 
 ## Performance
@@ -65,7 +63,7 @@ SafetyCulture Issue Relationships Exporter
 This script will fetch ALL issue relationships from your account
 ================================================================================
 
-📁 Output file: issue_relations_20241201_143022.csv
+📁 Output file: issue_relations.csv
 
 🚀 Starting export...
 
@@ -81,7 +79,7 @@ This script will fetch ALL issue relationships from your account
 📄 Total Pages: 10
 ⏱️  Total Time: 4.52s (0.08 minutes)
 ⚡ Average Rate: 2.21 pages/sec
-💾 Output saved to: issue_relations_20241201_143022.csv
+💾 Output saved to: issue_relations.csv
 ================================================================================
 ```
 
@@ -144,7 +142,7 @@ TOKEN = 'scapi_your_token_here'
 - **Read-only operation**: Script only reads data (no modifications to your account)
 - **Memory efficient**: Streams data directly to CSV (no memory buildup)
 - **Partial recovery**: On failure, partial data is automatically saved
-- **Safe to re-run**: Creates new timestamped file each run (no overwriting)
+- **Safe to re-run**: Overwrites previous output file with fresh data
 - **Token security**: Never commit TOKEN to version control
 - **Dynamic fields**: CSV headers adapt to API response structure
 
@@ -167,7 +165,6 @@ This script is useful for:
 
 ## Related Scripts
 
-- **[fetch_issues/](../fetch_issues/)** - Export detailed issue data with full attributes
-- **[delete_actions/](../delete_actions/)** - Bulk delete actions linked to issues
-- **[get_public_issue_links/](../get_public_issue_links/)** - Generate public sharing links for issues
-- **[set_inspection_site/](../set_inspection_site/)** - Update site associations for inspections
+- **[export_issue_public_links/](../export_issue_public_links/)** - Generate public sharing links for issues
+- **[delete_actions/](../../actions/delete_actions/)** - Bulk delete actions linked to issues
+- **[update_inspection_site/](../../inspections/update_inspection_site/)** - Update site associations for inspections

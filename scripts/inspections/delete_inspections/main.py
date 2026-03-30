@@ -9,7 +9,7 @@ import aiohttp
 import pandas as pd
 from tqdm.asyncio import tqdm
 
-TOKEN = ''  # Set your SafetyCulture API token here
+TOKEN = ""  # Set your SafetyCulture API token here
 BASE_URL = 'https://api.safetyculture.io'
 
 MAX_REQUESTS_PER_MINUTE = 500

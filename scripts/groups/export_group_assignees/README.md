@@ -4,7 +4,7 @@ Fetches all group assignees from your SafetyCulture organization and exports the
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` with your SafetyCulture API token in `main.py`
 3. **Run script**: `python main.py`
 

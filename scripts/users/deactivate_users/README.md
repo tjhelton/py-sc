@@ -4,7 +4,7 @@ Deactivates SafetyCulture users in bulk via API using the user upsert job system
 
 ## Quick Start
 
-1. **Install dependencies**: `pip install -r ../../requirements.txt`
+1. **Install dependencies**: `pip install -r ../../../requirements.txt`
 2. **Set API token**: Replace `TOKEN = ''` in `main.py` with your SafetyCulture API token
 3. **Prepare input**: Create `input.csv` with user_id or email column
 4. **Run script**: `python main.py`
