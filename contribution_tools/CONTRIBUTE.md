@@ -66,18 +66,18 @@ make fix
 ## 🛠️ Code Quality Tools
 
 ### What Gets Checked
-Our linting system only checks the actual script directories:
-- `archive_templates/`
-- `create_groups/`
-- `create_sites/`
-- `delete_sites/`
-- `export_asset_types/`
-- `export_template_access_rules/`
-- `fetch_issues/`
-- `get_public_issue_links/`
-- `get_sites_without_activity/`
-- `set_inspection_site/`
-- `update_user_sites/`
+Our linting system checks all script directories under `scripts/`, organized by category:
+- `scripts/actions/*` - Action management scripts
+- `scripts/assets/*` - Asset management scripts
+- `scripts/courses/*` - Course assignment scripts
+- `scripts/groups/*` - Group management scripts
+- `scripts/inspections/*` - Inspection management scripts
+- `scripts/issues/*` - Issue management scripts
+- `scripts/nuke_account/` - Account cleanup tool
+- `scripts/organizations/*` - Organization management scripts
+- `scripts/sites/*` - Site management scripts
+- `scripts/templates/*` - Template management scripts
+- `scripts/users/*` - User management scripts
 
 **Excluded from linting**: `venv/`, `dump/`, `contribution_tools/`, `.git/`, `__pycache__/`
 
@@ -112,8 +112,8 @@ Once installed with `make pre-commit`, these hooks automatically run before each
 
 ### GitHub Actions Integration
 Pull requests automatically trigger:
-- **Linting checks** on multiple Python versions (3.8-3.12)
-- **Auto-fix trigger**: Comment `/fix-lint` on any PR to automatically fix formatting
+- **Linting checks** using Python 3.11
+- **Formatting validation**: Ensures no auto-fixable changes remain
 
 ### Safe Auto-fixing
 When you run `make fix`, the system will:
@@ -127,25 +127,27 @@ When you run `make fix`, the system will:
 
 ```
 py-sc/
-├── archive_templates/              # Script: SafetyCulture template archiver
-├── create_groups/                  # Script: Group creation functionality
-├── create_sites/                   # Script: SafetyCulture site creator
-├── delete_sites/                   # Script: Site deletion functionality
-├── export_asset_types/             # Script: Asset types export
-├── export_template_access_rules/   # Script: Template access rules export
-├── fetch_issues/                   # Script: Issues fetching functionality
-├── get_public_issue_links/         # Script: Public issue links retrieval
-├── get_sites_without_activity/     # Script: Sites without activity report
-├── set_inspection_site/            # Script: Inspection site configuration
-├── update_user_sites/              # Script: User sites update functionality
-├── tools/                 # 🔧 Development tools (this directory)
-│   ├── CONTRIBUTING.md    # This guide
-│   ├── Makefile          # Development commands
-│   ├── lint-and-fix.py   # Main linting script
-│   ├── pyproject.toml    # Linter configurations
-│   ├── .pre-commit-config.yaml  # Pre-commit setup
-│   └── requirements-dev.txt     # Development dependencies
-└── README.md             # Main project documentation
+├── scripts/                        # 🚀 SafetyCulture API Scripts
+│   ├── actions/                    # Action management (delete_actions, delete_action_schedules)
+│   ├── assets/                     # Asset management (export_assets, export_asset_types, update_assets, delete_assets)
+│   ├── courses/                    # Course management (assign_courses)
+│   ├── groups/                     # Group management (create_groups, export_group_assignees)
+│   ├── inspections/                # Inspection management (archive, complete, delete, export, unarchive, update)
+│   ├── issues/                     # Issue management (export_issue_public_links, export_issue_relations)
+│   ├── nuke_account/               # ⚠️ Full account cleanup tool
+│   ├── organizations/              # Organization management (export_contractor_companies)
+│   ├── sites/                      # Site management (create, delete, export_inactive, update_users)
+│   ├── templates/                  # Template management (archive, export_access_rules, export_questions)
+│   └── users/                      # User management (deactivate_users, export_user_custom_fields)
+├── contribution_tools/             # 🔧 Development tools (this directory)
+│   ├── CONTRIBUTE.md               # This guide
+│   ├── Makefile                    # Development commands
+│   ├── lint-and-fix.py             # Main linting script
+│   ├── pyproject.toml              # Linter configurations
+│   ├── .pre-commit-config.yaml     # Pre-commit setup
+│   └── requirements-dev.txt        # Development dependencies
+├── requirements.txt                # Script dependencies
+└── README.md                       # Main project documentation
 ```
 
 ## 🐛 Troubleshooting

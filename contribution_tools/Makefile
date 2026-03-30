@@ -53,7 +53,7 @@ clean:
 	find .. -name ".mypy_cache" -type d -exec rm -rf {} +
 
 # Script files only (preserves functionality)
-SCRIPT_FILES = ../archive_templates/*.py ../create_groups/*.py ../create_sites/*.py ../delete_actions/*.py ../delete_assets/*.py ../delete_sites/*.py ../export_asset_types/*.py ../export_template_access_rules/*.py ../fetch_issues/*.py ../get_public_issue_links/*.py ../get_sites_without_activity/*.py ../set_inspection_site/*.py ../update_user_sites/*.py
+SCRIPT_FILES = ../scripts/actions/*/*.py ../scripts/assets/*/*.py ../scripts/courses/*/*.py ../scripts/groups/*/*.py ../scripts/inspections/*/*.py ../scripts/issues/*/*.py ../scripts/nuke_account/*.py ../scripts/organizations/*/*.py ../scripts/sites/*/*.py ../scripts/templates/*/*.py ../scripts/users/*/*.py
 
 # Run individual linters
 black-check:
