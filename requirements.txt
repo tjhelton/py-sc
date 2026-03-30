@@ -13,3 +13,7 @@ aiohttp>=3.9.0
 # Progress bar library
 # Required by: fetch_user_custom_fields, nuke_account
 tqdm>=4.66.0
+
+# Rich console library
+# Required by: update_action_status
+rich>=13.0.0
