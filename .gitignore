@@ -36,7 +36,7 @@ log_output.csv
 issues_export_*/
 
 # Private API scripts (not for public repository)
-scripts/complete_inspections/
+scripts/inspections/complete_inspections/
 
 # Common data file extensions
 *.xlsx
