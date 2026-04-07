@@ -11,6 +11,7 @@ include = '''(
   | scripts/issues/.*/.*\.py$
   | scripts/nuke_account/.*\.py$
   | scripts/organizations/.*/.*\.py$
+  | scripts/schedules/.*/.*\.py$
   | scripts/sites/.*/.*\.py$
   | scripts/templates/.*/.*\.py$
   | scripts/users/.*/.*\.py$
@@ -52,6 +53,7 @@ src_paths = [
     "../scripts/issues",
     "../scripts/nuke_account",
     "../scripts/organizations",
+    "../scripts/schedules",
     "../scripts/sites",
     "../scripts/templates",
     "../scripts/users",
@@ -95,6 +97,7 @@ files = [
     "../scripts/issues",
     "../scripts/nuke_account",
     "../scripts/organizations",
+    "../scripts/schedules",
     "../scripts/sites",
     "../scripts/templates",
     "../scripts/users",

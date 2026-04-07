@@ -73,6 +73,7 @@ def run_linters(fix_mode: bool = False) -> bool:
         "../scripts/issues/*/*.py",
         "../scripts/nuke_account/*.py",
         "../scripts/organizations/*/*.py",
+        "../scripts/schedules/*/*.py",
         "../scripts/sites/*/*.py",
         "../scripts/templates/*/*.py",
         "../scripts/users/*/*.py",
