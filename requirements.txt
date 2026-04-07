@@ -15,5 +15,5 @@ aiohttp>=3.9.0
 tqdm>=4.66.0
 
 # Rich console library
-# Required by: update_action_status
+# Required by: update_action_status, update_schedules
 rich>=13.0.0
