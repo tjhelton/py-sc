@@ -50,6 +50,7 @@ python main.py
 - **[delete_inspections/](scripts/inspections/delete_inspections/)** - Permanently delete inspections in bulk
 - **[export_inspection_location_changes/](scripts/inspections/export_inspection_location_changes/)** - Export address field changes from revision history
 - **[export_inspection_pdfs/](scripts/inspections/export_inspection_pdfs/)** - Bulk export inspection PDFs
+- **[generate_random_inspections/](scripts/inspections/generate_random_inspections/)** - Generate and complete random inspections from org templates
 - **[unarchive_inspections/](scripts/inspections/unarchive_inspections/)** - Bulk unarchive inspections
 - **[update_inspection_site/](scripts/inspections/update_inspection_site/)** - Configure inspection-site relationships
 
