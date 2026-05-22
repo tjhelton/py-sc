@@ -65,6 +65,7 @@ python main.py
 - **[create_sites/](scripts/sites/create_sites/)** - Create SafetyCulture sites with hierarchy support
 - **[delete_sites/](scripts/sites/delete_sites/)** - Delete SafetyCulture sites in bulk
 - **[export_sites_inactive/](scripts/sites/export_sites_inactive/)** - Identify and export inactive sites
+- **[move_sites/](scripts/sites/move_sites/)** - Bulk move sites under new parents or to root
 - **[update_site_users/](scripts/sites/update_site_users/)** - Bulk update user site assignments
 
 ### Templates
