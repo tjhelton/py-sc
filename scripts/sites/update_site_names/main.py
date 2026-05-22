@@ -40,7 +40,9 @@ class SafetyCultureAPI:
         url = f"{BASE_URL}/directory/v1/folder/{site_id}"
         async with self.semaphore:
             try:
-                async with self.session.patch(url, json={"name": new_name}) as response:
+                async with self.session.patch(
+                    url, json={"name": {"val": new_name}}
+                ) as response:
                     status_code = response.status
                     if response.status == 200:
                         return {
